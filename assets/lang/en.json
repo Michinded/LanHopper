@@ -12,11 +12,22 @@
   "connect_hint": "Scan QR or open the URL on another device",
   "device_name": "Device name",
   "port": "Port",
+  "port_hint": "1024 – 65535",
   "shared_folder": "Shared folder",
+  "folder_type": "Folder type",
+  "folder_type_local": "Local",
+  "folder_type_network": "Network",
+  "folder_path": "Path",
+  "folder_path_hint_local": "Browse or type a local path",
+  "folder_path_hint_network": "e.g.  \\\\server\\share  or  /mnt/share",
+  "browse": "Browse",
   "language": "Language",
   "save": "Save",
   "cancel": "Cancel",
   "upload": "Upload",
   "download": "Download",
-  "no_files": "No files shared yet"
+  "no_files": "No files shared yet",
+  "settings_saved": "Settings saved",
+  "invalid_port": "Port must be a number between 1024 and 65535",
+  "invalid_path": "Path cannot be empty"
 }

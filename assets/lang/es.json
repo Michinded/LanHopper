@@ -12,11 +12,22 @@
   "connect_hint": "Escanea el QR o abre la URL en otro dispositivo",
   "device_name": "Nombre del equipo",
   "port": "Puerto",
+  "port_hint": "1024 – 65535",
   "shared_folder": "Carpeta compartida",
+  "folder_type": "Tipo de carpeta",
+  "folder_type_local": "Local",
+  "folder_type_network": "Red",
+  "folder_path": "Ruta",
+  "folder_path_hint_local": "Examinar o escribir una ruta local",
+  "folder_path_hint_network": "Ej.  \\\\servidor\\carpeta  o  /mnt/compartido",
+  "browse": "Examinar",
   "language": "Idioma",
   "save": "Guardar",
   "cancel": "Cancelar",
   "upload": "Subir",
   "download": "Descargar",
-  "no_files": "No hay archivos compartidos aún"
+  "no_files": "No hay archivos compartidos aún",
+  "settings_saved": "Configuración guardada",
+  "invalid_port": "El puerto debe ser un número entre 1024 y 65535",
+  "invalid_path": "La ruta no puede estar vacía"
 }
