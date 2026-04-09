@@ -50,7 +50,8 @@ def login_page(request: Request):
                     value=_make_token(),
                     httponly=True,
                     max_age=_TOKEN_EXPIRE_MINUTES * 60,
-                    samesite="strict",
+                    samesite="lax",
+                    path="/",
                 )
                 return response
         except Exception:
