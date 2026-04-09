@@ -8,9 +8,6 @@ import app.server as server
 
 router = APIRouter()
 
-_TOKEN_EXPIRE_MINUTES = 60
-
-
 class LoginRequest(BaseModel):
     password: str
 
@@ -22,12 +19,14 @@ class TokenResponse(BaseModel):
 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest):
+    from app import config
     if body.password != server.session["password"]:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
 
+    session_minutes = int(config.load().get("session_minutes", 60))
     payload = {
         "sub": "lanhopper-client",
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=_TOKEN_EXPIRE_MINUTES),
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=session_minutes),
     }
     token = jwt.encode(payload, server.session["jwt_secret"], algorithm="HS256")
     return TokenResponse(access_token=token)

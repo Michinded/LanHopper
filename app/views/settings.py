@@ -70,6 +70,22 @@ class SettingsView(ft.Column):
             on_click=self._on_validate_path,
         )
 
+        self._field_qr_minutes = ft.TextField(
+            label=i18n.t("qr_token_minutes"),
+            hint_text=i18n.t("minutes_hint"),
+            value=str(self._cfg.get("qr_token_minutes", 5)),
+            width=180,
+            keyboard_type=ft.KeyboardType.NUMBER,
+        )
+
+        self._field_session_minutes = ft.TextField(
+            label=i18n.t("session_minutes"),
+            hint_text=i18n.t("minutes_hint"),
+            value=str(self._cfg.get("session_minutes", 60)),
+            width=180,
+            keyboard_type=ft.KeyboardType.NUMBER,
+        )
+
         self._lang_dropdown = ft.Dropdown(
             label=i18n.t("language"),
             value=self._cfg.get("language", "en"),
@@ -109,6 +125,10 @@ class SettingsView(ft.Column):
                             controls=[self._field_path, self._btn_browse, self._btn_validate_path],
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
+
+                        _section_title(i18n.t("security")),
+                        self._field_qr_minutes,
+                        self._field_session_minutes,
 
                         _section_title(i18n.t("language")),
                         self._lang_dropdown,
@@ -249,6 +269,8 @@ class SettingsView(ft.Column):
             "type": self._folder_type_dropdown.value,
             "path": normalize_path(self._field_path.value.strip(), self._folder_type_dropdown.value),
         }
+        self._cfg["qr_token_minutes"] = int(self._field_qr_minutes.value.strip())
+        self._cfg["session_minutes"] = int(self._field_session_minutes.value.strip())
         self._cfg["language"] = self._lang_dropdown.value
         config.save(self._cfg)
         self._show_snack(i18n.t("settings_saved"))
@@ -268,8 +290,18 @@ class SettingsView(ft.Column):
             self._field_path.error_text = i18n.t("invalid_path")
             self._field_path.update()
             return False
-
         self._field_path.error_text = None
+
+        for field in (self._field_qr_minutes, self._field_session_minutes):
+            try:
+                val = int(field.value.strip())
+                assert 1 <= val <= 1440
+                field.error_text = None
+            except (ValueError, AssertionError):
+                field.error_text = i18n.t("minutes_hint")
+                field.update()
+                return False
+
         return True
 
 

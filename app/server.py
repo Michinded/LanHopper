@@ -15,7 +15,9 @@ from jose import jwt
 from app.api import auth, files, upload, web
 from app.middleware.auth import AuthMiddleware
 
-_QR_TOKEN_MINUTES = 5
+def _qr_minutes() -> int:
+    from app import config
+    return int(config.load().get("qr_token_minutes", 5))
 
 # In-memory session state — reset on every server start
 session: dict = {
@@ -52,8 +54,9 @@ def get_lan_ip() -> str:
 
 def generate_qr_token() -> str:
     """Generate a fresh single-use QR token, print URL, notify UI callback."""
+    minutes = _qr_minutes()
     jti = secrets.token_hex(8)
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=_QR_TOKEN_MINUTES)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=minutes)
     payload = {
         "sub": "lanhopper-qr",
         "jti": jti,
@@ -64,7 +67,7 @@ def generate_qr_token() -> str:
     session["qr_expires_at"] = expires_at
 
     url = f"http://{session['lan_ip']}:{session['port']}/?qr={token}"
-    print(f"[LanHopper] QR URL (valid {_QR_TOKEN_MINUTES} min) →\n  {url}\n")
+    print(f"[LanHopper] QR URL (valid {minutes} min) →\n  {url}\n")
 
     if _on_qr_rotated:
         _on_qr_rotated(token, expires_at)
@@ -93,9 +96,9 @@ def regenerate_qr() -> str:
 
 
 def _qr_rotation_loop(stop_event: threading.Event, reset_event: threading.Event) -> None:
-    """Rotate QR every 5 min. Reset event restarts the countdown without rotating."""
+    """Rotate QR every qr_token_minutes. Reset event restarts the countdown."""
     while True:
-        reset_triggered = reset_event.wait(timeout=_QR_TOKEN_MINUTES * 60)
+        reset_triggered = reset_event.wait(timeout=_qr_minutes() * 60)
 
         if stop_event.is_set():
             break

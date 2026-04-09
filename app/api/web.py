@@ -10,14 +10,16 @@ from app import config
 
 router = APIRouter()
 
-_TOKEN_EXPIRE_MINUTES = 60
-
 # ------------------------------------------------------------------- helpers
+
+def _session_minutes() -> int:
+    return int(config.load().get("session_minutes", 60))
+
 
 def _make_token() -> str:
     payload = {
         "sub": "lanhopper-client",
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=_TOKEN_EXPIRE_MINUTES),
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=_session_minutes()),
     }
     return jwt.encode(payload, server.session["jwt_secret"], algorithm="HS256")
 
@@ -49,7 +51,7 @@ def login_page(request: Request):
                     key="access_token",
                     value=_make_token(),
                     httponly=True,
-                    max_age=_TOKEN_EXPIRE_MINUTES * 60,
+                    max_age=_session_minutes() * 60,
                     samesite="lax",
                     path="/",
                 )
@@ -83,7 +85,7 @@ async def web_login(request: Request, password: str = Form(...)):
         key="access_token",
         value=token,
         httponly=True,
-        max_age=_TOKEN_EXPIRE_MINUTES * 60,
+        max_age=_session_minutes() * 60,
         samesite="strict",
     )
     return response

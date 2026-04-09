@@ -22,6 +22,8 @@ _DEFAULTS = {
         "path": _default_shared_dir(),
     },
     "language": "en",
+    "qr_token_minutes": 5,
+    "session_minutes": 60,
 }
 
 
