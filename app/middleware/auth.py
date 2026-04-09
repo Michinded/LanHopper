@@ -6,7 +6,7 @@ from starlette.responses import JSONResponse, RedirectResponse
 import app.server as server
 
 # Paths that never require authentication
-_PUBLIC_PATHS = {"/auth/login", "/", "/web/login"}
+_PUBLIC_PATHS = {"/auth/login", "/", "/web/login", "/logout"}
 
 
 def _extract_token(request: Request) -> str | None:

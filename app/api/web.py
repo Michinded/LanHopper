@@ -89,6 +89,14 @@ async def web_login(request: Request, password: str = Form(...)):
     return response
 
 
+@router.get("/logout")
+def logout():
+    """Clear the session cookie and redirect to login."""
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie(key="access_token", path="/")
+    return response
+
+
 @router.get("/browse", response_class=HTMLResponse)
 def browse_page():
     """File listing page — protected by AuthMiddleware via cookie."""
@@ -215,7 +223,17 @@ def _browse_html(files: list[Path], device_name: str) -> str:
       gap: 12px;
     }}
     header h1 {{ font-size: 1.2rem; font-weight: 600; }}
-    header span {{ font-size: 0.85rem; opacity: 0.8; }}
+    header span {{ font-size: 0.85rem; opacity: 0.8; flex: 1; }}
+    header a.logout {{
+      color: white;
+      opacity: 0.85;
+      font-size: 0.85rem;
+      text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.5);
+      padding: 5px 12px;
+      border-radius: 6px;
+    }}
+    header a.logout:hover {{ opacity: 1; background: rgba(255,255,255,0.15); }}
     main {{ max-width: 760px; margin: 32px auto; padding: 0 16px; }}
     table {{ width: 100%; border-collapse: collapse; background: white;
              border-radius: 12px; overflow: hidden;
@@ -234,6 +252,7 @@ def _browse_html(files: list[Path], device_name: str) -> str:
   <header>
     <h1>LanHopper</h1>
     <span>{device_name}</span>
+    <a href="/logout" class="logout">Log out</a>
   </header>
   <main>{table}</main>
 </body>
