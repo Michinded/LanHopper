@@ -22,13 +22,24 @@ pyinstaller LanHopper.spec
 
 ## Flet API reference
 
-When working with Flet (UI framework), always consult the official docs for correct API usage — especially since the API changed significantly at v0.80:
+When working with Flet, always consult the installed source at `.venv/lib/python3.14/site-packages/flet/controls/` to verify parameter names before using them. The API changed significantly at v0.80 and many online examples are outdated.
 
 - Docs: https://flet.dev/docs/
 - API Reference: https://docs.flet.dev/api-reference/
 
-Known breaking changes already applied:
-- `ft.app(target=fn)` → `ft.run(fn)` (positional, not keyword)
+**Verified breaking changes in this project's installed version:**
+
+| Old (pre-0.80 / outdated examples) | Correct |
+|---|---|
+| `ft.app(target=fn)` | `ft.run(fn)` — positional |
+| `ft.Icon(name=x)` | `ft.Icon(x)` — positional |
+| `FilledButton(text=x, icon=y)` | `FilledButton(content=x, icon=y)` |
+| `ElevatedButton(text=x)` | `ElevatedButton(content=x)` |
+| `OutlinedButton(text=x)` | `OutlinedButton(content=x)` |
+| `Dropdown(on_change=fn)` | `Dropdown(on_select=fn)` |
+| `FilePicker(on_result=fn)` | `picker = ft.FilePicker(); picker.on_result = fn` — assign after init, add to `page.overlay` |
+
+**Rule:** when an `unexpected keyword argument` error appears on a Flet control, grep the installed source for the `__init__` or `@control` dataclass fields — do not trust docs or examples without verifying.
 
 ## Architecture
 
