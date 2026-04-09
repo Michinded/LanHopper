@@ -4,9 +4,9 @@
 
 ```
 LanHopper/
-├── main.py                    # Entry point — launches Flet app
+├── main.py                    # Entry point — launches Flet app via ft.run()
 ├── app/
-│   ├── config.py              # Loads/saves data/user_config.json
+│   ├── config.py              # Loads/saves data/user_config.json, resolves paths for dev+bundle
 │   ├── i18n.py                # Loads assets/lang/<lang>.json via t("key")
 │   ├── server.py              # Starts/stops FastAPI+uvicorn in a background thread
 │   │
@@ -18,9 +18,12 @@ LanHopper/
 │   ├── middleware/            # FastAPI middleware
 │   │   └── auth.py            # Validates Bearer JWT on all routes except /auth/login
 │   │
+│   ├── utils/
+│   │   └── paths.py           # Cross-platform path helpers: normalize_path, pick_folder, is_unc
+│   │
 │   └── views/                 # Flet screens
-│       ├── home.py            # Main screen: start/stop, QR code, file list
-│       └── settings.py        # Settings screen: port, folder, language, device name
+│       ├── home.py            # Layout shell: NavigationRail + content switcher
+│       └── settings.py        # Settings screen: port, folder type/path, language, device name
 │
 ├── assets/                    # Bundled read-only resources (packed by PyInstaller)
 │   ├── icon.png
@@ -39,13 +42,27 @@ LanHopper/
 
 | Layer | Technology | Responsibility |
 |---|---|---|
-| UI | Flet | Desktop window, screens, user interaction |
+| UI | Flet ≥ 0.80 | Desktop window, screens, user interaction |
 | HTTP Server | FastAPI + uvicorn | File transfer REST API, runs in background thread |
 | Auth | python-jose (JWT) | Session tokens signed with an in-memory secret |
 | Config | JSON (stdlib) | Persist user preferences across launches |
 | i18n | JSON + stdlib | Load UI strings from language file |
+| Path utils | pathlib + tkinter | Cross-platform path normalization and native folder picker |
 | QR | qrcode + Pillow | Generate connection QR shown on home screen |
 | Build | PyInstaller | Package into a single executable |
+
+## UI Layout
+
+```
+┌─────────────────────────────────────┐
+│  NavigationRail  │  Content area    │
+│                  │                  │
+│  🏠 Home         │  Active screen   │
+│  ⚙  Settings    │                  │
+└─────────────────────────────────────┘
+```
+
+`home.py` owns the shell (rail + content `Column`). `_navigate(index)` clears and replaces the content area. Each screen is a self-contained `ft.Column` subclass.
 
 ## Security Model
 
@@ -60,14 +77,28 @@ LanHopper/
 
 ```json
 {
-  "device_name": "My PC",
+  "device_name": "LanHopper",
   "port": 8080,
-  "shared_folder": "~/LanHopper/shared",
+  "shared_folder": {
+    "type": "local",
+    "path": "/path/to/executable/shared"
+  },
   "language": "en"
 }
 ```
 
-Created automatically with defaults on first launch if it does not exist.
+- Created automatically with defaults on first launch if it does not exist.
+- Default `shared_folder.path` is `./shared` relative to the executable (works in dev and bundle).
+- Old string format for `shared_folder` is migrated automatically to the dict format on load.
+
+## Shared Folder Types
+
+| Type | Behavior | Path input |
+|---|---|---|
+| `local` | `Path.expanduser()` normalization | Read-only field + native folder picker (tkinter) |
+| `network` | Stored as-is | Editable text field (UNC on Windows, mount path on macOS/Linux) |
+
+The folder picker (`pick_folder()` in `app/utils/paths.py`) runs in a daemon thread to avoid blocking the Flet UI thread.
 
 ## i18n
 
@@ -80,13 +111,26 @@ t("start_server")  # → "Start Server"
 Language is determined by `config["language"]`. Files live in `assets/lang/`.
 When running as a PyInstaller bundle, paths are resolved via `sys._MEIPASS`.
 
+## Flet API Notes (≥ 0.80)
+
+This version introduced breaking changes from older Flet examples:
+
+| Old | New |
+|---|---|
+| `ft.app(target=fn)` | `ft.run(fn)` |
+| `ft.Icon(name=x)` | `ft.Icon(x)` — positional |
+| `FilledButton(text=x)` | `FilledButton(content=x)` |
+| `Dropdown(on_change=fn)` | `Dropdown(on_select=fn)` |
+| `FilePicker(on_result=fn)` | assign `picker.on_result = fn` after init; add to `page.overlay` |
+
 ## Adding a New Screen
 
-1. Create `app/views/my_screen.py` with a Flet `Control` subclass.
-2. Import and render it from `app/views/home.py` or wire it to a nav element.
+1. Create `app/views/my_screen.py` as a `ft.Column` subclass.
+2. Add a `NavigationRailDestination` in `home.py`.
+3. Handle the new index in `HomeView._navigate()`.
 
 ## Adding a New API Endpoint
 
 1. Create or edit a file in `app/api/`.
 2. Define a FastAPI `APIRouter`.
-3. Include the router in `app/server.py`.
+3. Include the router in `app/server.py` via `app.include_router(...)`.
