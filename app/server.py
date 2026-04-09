@@ -1,6 +1,6 @@
-import random
 import secrets
 import socket
+import string
 import threading
 import uvicorn
 from fastapi import FastAPI
@@ -43,7 +43,8 @@ def start(port: int) -> str:
     """Generate credentials, start the server, and return the session password."""
     global _server_thread, _uvicorn_server
 
-    session["password"] = str(random.randint(0, 999999)).zfill(6)
+    _charset = string.ascii_uppercase + string.digits
+    session["password"] = "".join(secrets.choice(_charset) for _ in range(6))
     session["jwt_secret"] = secrets.token_hex(32)
     session["port"] = port
     session["lan_ip"] = get_lan_ip()
