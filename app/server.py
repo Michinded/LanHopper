@@ -5,7 +5,7 @@ import threading
 import uvicorn
 from fastapi import FastAPI
 
-from app.api import auth, files, upload
+from app.api import auth, files, upload, web
 from app.middleware.auth import AuthMiddleware
 
 # In-memory session state — reset on every server start
@@ -33,6 +33,7 @@ def get_lan_ip() -> str:
 def _build_app() -> FastAPI:
     app = FastAPI(title="LanHopper", docs_url=None, redoc_url=None)
     app.add_middleware(AuthMiddleware)
+    app.include_router(web.router)            # GET /, POST /web/login, GET /browse
     app.include_router(auth.router, prefix="/auth")
     app.include_router(files.router, prefix="/files")
     app.include_router(upload.router, prefix="/upload")
@@ -54,6 +55,9 @@ def start(port: int) -> str:
 
     _server_thread = threading.Thread(target=_uvicorn_server.run, daemon=True)
     _server_thread.start()
+
+    print(f"\n[LanHopper] Server started → http://{session['lan_ip']}:{port}")
+    print(f"[LanHopper] Password       → {session['password']}\n")
 
     return session["password"]
 
