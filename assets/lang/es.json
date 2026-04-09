@@ -32,5 +32,16 @@
   "invalid_path": "La ruta no puede estar vacía",
   "validate_path": "Validar ruta",
   "path_ok": "La ruta es accesible",
-  "path_not_found": "Ruta no encontrada o sin acceso"
+  "path_not_found": "Ruta no encontrada o sin acceso",
+  "language_restart_hint": "Se requiere reiniciar la app para aplicar el cambio de idioma.",
+  "check_port": "Verificar puerto",
+  "port_available": "El puerto {port} está disponible",
+  "port_in_use_title": "El puerto {port} está en uso",
+  "port_in_use_body": "Proceso: {name} (PID {pid})",
+  "port_in_use_unknown": "Proceso desconocido",
+  "kill_process": "Terminar proceso",
+  "kill_success": "Proceso terminado. El puerto {port} quedó libre.",
+  "kill_error_permission": "Permiso denegado. Intenta ejecutar la app como administrador.",
+  "kill_error_generic": "No se pudo terminar el proceso.",
+  "close": "Cerrar"
 }

@@ -32,5 +32,16 @@
   "invalid_path": "Path cannot be empty",
   "validate_path": "Validate path",
   "path_ok": "Path is accessible",
-  "path_not_found": "Path not found or not accessible"
+  "path_not_found": "Path not found or not accessible",
+  "language_restart_hint": "A restart is required for the language change to take effect.",
+  "check_port": "Check port",
+  "port_available": "Port {port} is available",
+  "port_in_use_title": "Port {port} is in use",
+  "port_in_use_body": "Process: {name} (PID {pid})",
+  "port_in_use_unknown": "Unknown process",
+  "kill_process": "Kill process",
+  "kill_success": "Process terminated. Port {port} is now free.",
+  "kill_error_permission": "Permission denied. Try running the app as administrator.",
+  "kill_error_generic": "Could not terminate the process.",
+  "close": "Close"
 }
