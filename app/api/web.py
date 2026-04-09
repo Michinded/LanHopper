@@ -34,14 +34,39 @@ def _shared_path() -> Path:
 
 @router.get("/", response_class=HTMLResponse)
 def login_page(request: Request):
-    """Public login page. Redirect to /browse if already authenticated."""
-    token = request.cookies.get("access_token")
-    if token:
+    """Public login page. Handles QR token redemption and existing session check."""
+
+    # 1. QR token redemption
+    qr_token = request.query_params.get("qr")
+    if qr_token:
         try:
-            jwt.decode(token, server.session["jwt_secret"], algorithms=["HS256"])
+            claims = jwt.decode(qr_token, server.session["jwt_secret"], algorithms=["HS256"])
+            jti = claims.get("jti")
+            if jti and jti not in server.session["used_qr_tokens"]:
+                server.session["used_qr_tokens"].add(jti)
+                response = RedirectResponse(url="/browse", status_code=303)
+                response.set_cookie(
+                    key="access_token",
+                    value=_make_token(),
+                    httponly=True,
+                    max_age=_TOKEN_EXPIRE_MINUTES * 60,
+                    samesite="strict",
+                )
+                return response
+        except Exception:
+            pass
+        # Invalid or already-used QR — show login with a hint
+        return HTMLResponse(_login_html(error=False, qr_expired=True))
+
+    # 2. Already have a valid session cookie → skip login
+    cookie_token = request.cookies.get("access_token")
+    if cookie_token:
+        try:
+            jwt.decode(cookie_token, server.session["jwt_secret"], algorithms=["HS256"])
             return RedirectResponse(url="/browse")
         except Exception:
             pass
+
     return HTMLResponse(_login_html(error=False))
 
 
@@ -80,10 +105,13 @@ def browse_page():
 
 # ----------------------------------------------------------------- html
 
-def _login_html(error: bool) -> str:
-    error_block = (
-        '<p class="error">Incorrect password. Try again.</p>' if error else ""
-    )
+def _login_html(error: bool, qr_expired: bool = False) -> str:
+    if error:
+        error_block = '<p class="error">Incorrect password. Try again.</p>'
+    elif qr_expired:
+        error_block = '<p class="error">QR code expired or already used. Enter the password instead.</p>'
+    else:
+        error_block = ""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
