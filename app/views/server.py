@@ -71,11 +71,9 @@ class ServerView(ft.Column):
             on_click=self._toggle_server,
         )
 
-        self._qr_image = ft.Image(
-            "",
+        self._qr_container = ft.Container(
             width=180,
             height=180,
-            fit=ft.BoxFit.CONTAIN,
             visible=False,
         )
 
@@ -103,7 +101,7 @@ class ServerView(ft.Column):
             self._toggle_btn,
             self._url_field,
             self._password_field,
-            self._qr_image,
+            self._qr_container,
             self._qr_expires_label,
             self._regen_btn,
         ]
@@ -139,8 +137,13 @@ class ServerView(ft.Column):
 
     def _update_qr(self, token: str, expires_at: datetime):
         b64 = server.build_qr_base64(token)
-        self._qr_image.src_base64 = b64
-        self._qr_image.visible = True
+        self._qr_container.content = ft.Image(
+            b64,
+            width=180,
+            height=180,
+            fit=ft.BoxFit.CONTAIN,
+        )
+        self._qr_container.visible = True
 
         local_exp = expires_at.astimezone()
         self._qr_expires_label.value = i18n.t("qr_expires_at").format(
@@ -167,7 +170,7 @@ class ServerView(ft.Column):
         self._toggle_btn.icon = ft.Icons.STOP_CIRCLE_OUTLINED if running else ft.Icons.PLAY_CIRCLE_OUTLINED
 
         if not running:
-            self._qr_image.visible = False
+            self._qr_container.visible = False
             self._qr_expires_label.visible = False
             self._regen_btn.visible = False
 
