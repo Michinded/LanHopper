@@ -35,6 +35,8 @@
   "server_url": "Access URL",
   "session_password": "Session password",
   "server_start_error": "Failed to start server: {error}",
+  "regenerate_qr": "Regenerate QR",
+  "qr_expires_at": "Expires at {time}",
   "settings_saved": "Settings saved",
   "invalid_port": "Port must be a number between 1024 and 65535",
   "invalid_path": "Path cannot be empty",

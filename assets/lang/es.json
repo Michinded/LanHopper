@@ -35,6 +35,8 @@
   "server_url": "URL de acceso",
   "session_password": "Contraseña de sesión",
   "server_start_error": "Error al iniciar el servidor: {error}",
+  "regenerate_qr": "Regenerar QR",
+  "qr_expires_at": "Vence el {time}",
   "settings_saved": "Configuración guardada",
   "invalid_port": "El puerto debe ser un número entre 1024 y 65535",
   "invalid_path": "La ruta no puede estar vacía",

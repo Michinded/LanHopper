@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import flet as ft
 from flet.controls.services.clipboard import Clipboard
 
@@ -11,10 +12,21 @@ class ServerView(ft.Column):
             expand=True,
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=24,
+            spacing=20,
         )
         self._running = server.is_running()
         self._build()
+
+    # ---------------------------------------------------- lifecycle
+
+    def did_mount(self):
+        server.set_qr_callback(self._on_qr_rotated)
+        # If server is already running when we navigate here, load the current QR
+        if self._running and server.session.get("qr_token"):
+            self._update_qr(server.session["qr_token"], server.session["qr_expires_at"])
+
+    def will_unmount(self):
+        server.set_qr_callback(None)
 
     # ----------------------------------------------------------------- build
 
@@ -59,6 +71,29 @@ class ServerView(ft.Column):
             on_click=self._toggle_server,
         )
 
+        self._qr_image = ft.Image(
+            "",
+            width=180,
+            height=180,
+            fit=ft.BoxFit.CONTAIN,
+            visible=False,
+        )
+
+        self._qr_expires_label = ft.Text(
+            "",
+            size=12,
+            color=ft.Colors.GREY_500,
+            italic=True,
+            visible=False,
+        )
+
+        self._regen_btn = ft.OutlinedButton(
+            content=i18n.t("regenerate_qr"),
+            icon=ft.Icons.REFRESH,
+            on_click=self._on_regenerate,
+            visible=False,
+        )
+
         self.controls = [
             ft.Row(
                 controls=[self._status_icon, self._status_label],
@@ -68,12 +103,9 @@ class ServerView(ft.Column):
             self._toggle_btn,
             self._url_field,
             self._password_field,
-            # QR placeholder — implemented in a future iteration
-            ft.Container(
-                content=ft.Icon(ft.Icons.QR_CODE, size=80, color=ft.Colors.GREY_300),
-                visible=self._running,
-                tooltip="QR code — coming soon",
-            ),
+            self._qr_image,
+            self._qr_expires_label,
+            self._regen_btn,
         ]
 
     # ------------------------------------------------------------ interactions
@@ -94,6 +126,30 @@ class ServerView(ft.Column):
                     bgcolor=ft.Colors.RED_700,
                 ))
 
+    def _on_regenerate(self, _):
+        server.regenerate_qr()
+
+    def _on_qr_rotated(self, token: str, expires_at: datetime):
+        """Called from the background thread — must use page.run_task for UI updates."""
+        if self.page:
+            self.page.run_task(self._update_qr_async, token, expires_at)
+
+    async def _update_qr_async(self, token: str, expires_at: datetime):
+        self._update_qr(token, expires_at)
+
+    def _update_qr(self, token: str, expires_at: datetime):
+        b64 = server.build_qr_base64(token)
+        self._qr_image.src_base64 = b64
+        self._qr_image.visible = True
+
+        local_exp = expires_at.astimezone()
+        self._qr_expires_label.value = i18n.t("qr_expires_at").format(
+            time=local_exp.strftime("%d/%m/%Y %H:%M:%S")
+        )
+        self._qr_expires_label.visible = True
+        self._regen_btn.visible = True
+        self.update()
+
     def _refresh(self, running: bool):
         self._running = running
 
@@ -110,7 +166,11 @@ class ServerView(ft.Column):
         self._toggle_btn.content = i18n.t("stop_server") if running else i18n.t("start_server")
         self._toggle_btn.icon = ft.Icons.STOP_CIRCLE_OUTLINED if running else ft.Icons.PLAY_CIRCLE_OUTLINED
 
-        self.controls[-1].visible = running  # QR placeholder
+        if not running:
+            self._qr_image.visible = False
+            self._qr_expires_label.visible = False
+            self._regen_btn.visible = False
+
         self.update()
 
     async def _copy_url(self, _):
