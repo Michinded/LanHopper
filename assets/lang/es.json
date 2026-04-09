@@ -1,0 +1,22 @@
+{
+  "app_title": "LanHopper",
+  "app_subtitle": "Transferencia de archivos en LAN sin complicaciones",
+  "start_server": "Iniciar servidor",
+  "stop_server": "Detener servidor",
+  "server_running": "Servidor activo",
+  "server_stopped": "Servidor detenido",
+  "settings": "Configuración",
+  "login": "Ingresar",
+  "password": "Contraseña",
+  "password_label": "Contraseña de sesión",
+  "connect_hint": "Escanea el QR o abre la URL en otro dispositivo",
+  "device_name": "Nombre del equipo",
+  "port": "Puerto",
+  "shared_folder": "Carpeta compartida",
+  "language": "Idioma",
+  "save": "Guardar",
+  "cancel": "Cancelar",
+  "upload": "Subir",
+  "download": "Descargar",
+  "no_files": "No hay archivos compartidos aún"
+}

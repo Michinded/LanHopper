@@ -1,0 +1,22 @@
+{
+  "app_title": "LanHopper",
+  "app_subtitle": "LAN file transfer made simple",
+  "start_server": "Start Server",
+  "stop_server": "Stop Server",
+  "server_running": "Server is running",
+  "server_stopped": "Server is stopped",
+  "settings": "Settings",
+  "login": "Login",
+  "password": "Password",
+  "password_label": "Session password",
+  "connect_hint": "Scan QR or open the URL on another device",
+  "device_name": "Device name",
+  "port": "Port",
+  "shared_folder": "Shared folder",
+  "language": "Language",
+  "save": "Save",
+  "cancel": "Cancel",
+  "upload": "Upload",
+  "download": "Download",
+  "no_files": "No files shared yet"
+}
