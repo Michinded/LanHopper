@@ -1,6 +1,8 @@
 import flet as ft
 
+import app.server as server
 from app import config, i18n
+from app.views.server import ServerView
 from app.views.settings import SettingsView
 
 
@@ -33,6 +35,11 @@ class HomeView:
                     label=i18n.t("app_title"),
                 ),
                 ft.NavigationRailDestination(
+                    icon=ft.Icons.WIFI_OUTLINED,
+                    selected_icon=ft.Icons.WIFI,
+                    label=i18n.t("server"),
+                ),
+                ft.NavigationRailDestination(
                     icon=ft.Icons.SETTINGS_OUTLINED,
                     selected_icon=ft.Icons.SETTINGS,
                     label=i18n.t("settings"),
@@ -62,6 +69,8 @@ class HomeView:
         if index == 0:
             self._content.controls.append(_HomeScreen())
         elif index == 1:
+            self._content.controls.append(ServerView())
+        elif index == 2:
             self._content.controls.append(SettingsView())
 
         self.page.update()
@@ -77,15 +86,16 @@ class _HomeScreen(ft.Column):
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=24,
         )
-        self._server_running = False
+        running = server.is_running()
+
         self._status_icon = ft.Icon(
             ft.Icons.CIRCLE,
-            color=ft.Colors.GREY_400,
+            color=ft.Colors.GREEN_500 if running else ft.Colors.GREY_400,
             size=18,
         )
         self._status_label = ft.Text(
-            i18n.t("server_stopped"),
-            color=ft.Colors.GREY_500,
+            i18n.t("server_running") if running else i18n.t("server_stopped"),
+            color=ft.Colors.GREEN_700 if running else ft.Colors.GREY_500,
             size=14,
         )
 
@@ -101,20 +111,14 @@ class _HomeScreen(ft.Column):
                 color=ft.Colors.GREY_600,
             ),
             ft.Container(height=8),
-            self._status_card(),
-        ]
-
-    def _status_card(self) -> ft.Container:
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    self._status_icon,
-                    self._status_label,
-                ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                spacing=8,
+            ft.Container(
+                content=ft.Row(
+                    controls=[self._status_icon, self._status_label],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=8,
+                ),
+                bgcolor=ft.Colors.GREY_100,
+                border_radius=12,
+                padding=ft.Padding(left=24, right=24, top=12, bottom=12),
             ),
-            bgcolor=ft.Colors.GREY_100,
-            border_radius=12,
-            padding=ft.Padding(left=24, right=24, top=12, bottom=12),
-        )
+        ]
