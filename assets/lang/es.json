@@ -42,6 +42,7 @@
   "path_ok": "La ruta es accesible",
   "path_not_found": "Ruta no encontrada o sin acceso",
   "language_restart_hint": "Se requiere reiniciar la app para aplicar el cambio de idioma.",
+  "settings_server_running_hint": "Detén el servidor antes de cambiar la configuración.",
   "check_port": "Verificar puerto",
   "port_available": "El puerto {port} está disponible",
   "port_in_use_title": "El puerto {port} está en uso",

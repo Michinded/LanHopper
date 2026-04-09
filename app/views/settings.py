@@ -1,6 +1,7 @@
 import threading
 import flet as ft
 
+import app.server as server
 from app import config, i18n
 from app.utils.network import check_port, kill_process
 from app.utils.paths import normalize_path, pick_folder
@@ -119,10 +120,18 @@ class SettingsView(ft.Column):
                         ),
 
                         ft.Container(height=8),
+                        ft.Text(
+                            i18n.t("settings_server_running_hint"),
+                            size=12,
+                            color=ft.Colors.RED_400,
+                            italic=True,
+                            visible=server.is_running(),
+                        ),
                         ft.FilledButton(
                             content=i18n.t("save"),
                             icon=ft.Icons.SAVE_OUTLINED,
                             on_click=self._save,
+                            disabled=server.is_running(),
                         ),
                     ],
                 ),
