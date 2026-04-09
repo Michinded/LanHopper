@@ -2,3 +2,10 @@
 .idea
 __pycache__
 *.pyc
+
+# Runtime data — created automatically on first launch
+data/
+
+# PyInstaller output
+dist/
+build/
