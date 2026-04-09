@@ -58,5 +58,8 @@
   "kill_success": "Proceso terminado. El puerto {port} quedó libre.",
   "kill_error_permission": "Permiso denegado. Intenta ejecutar la app como administrador.",
   "kill_error_generic": "No se pudo terminar el proceso.",
-  "close": "Cerrar"
+  "close": "Cerrar",
+  "qr_hidden": "QR oculto",
+  "hide_qr": "Ocultar QR",
+  "show_qr": "Mostrar QR"
 }

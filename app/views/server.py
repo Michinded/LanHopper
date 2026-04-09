@@ -71,9 +71,35 @@ class ServerView(ft.Column):
             on_click=self._toggle_server,
         )
 
+        self._qr_revealed = True
+
         self._qr_container = ft.Container(
             width=180,
             height=180,
+            visible=False,
+        )
+
+        self._qr_placeholder = ft.Container(
+            width=180,
+            height=180,
+            bgcolor=ft.Colors.GREY_200,
+            border_radius=8,
+            visible=False,
+            content=ft.Column(
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=8,
+                controls=[
+                    ft.Icon(ft.Icons.LOCK_OUTLINED, size=36, color=ft.Colors.GREY_400),
+                    ft.Text(i18n.t("qr_hidden"), size=12, color=ft.Colors.GREY_500),
+                ],
+            ),
+        )
+
+        self._qr_eye_btn = ft.IconButton(
+            icon=ft.Icons.VISIBILITY_OFF_OUTLINED,
+            tooltip=i18n.t("hide_qr"),
+            on_click=self._toggle_qr_visibility,
             visible=False,
         )
 
@@ -102,9 +128,16 @@ class ServerView(ft.Column):
             self._url_field,
             self._password_field,
             self._qr_container,
-            self._qr_expires_label,
+            self._qr_placeholder,
+            ft.Row(
+                controls=[self._qr_expires_label, self._qr_eye_btn],
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=4,
+                visible=False,
+            ),
             self._regen_btn,
         ]
+        self._qr_row = self.controls[-2]
 
     # ------------------------------------------------------------ interactions
 
@@ -127,6 +160,17 @@ class ServerView(ft.Column):
     def _on_regenerate(self, _):
         server.regenerate_qr()
 
+    def _toggle_qr_visibility(self, _):
+        self._qr_revealed = not self._qr_revealed
+        self._qr_container.visible = self._qr_revealed
+        self._qr_placeholder.visible = not self._qr_revealed
+        self._qr_eye_btn.icon = (
+            ft.Icons.VISIBILITY_OFF_OUTLINED if self._qr_revealed
+            else ft.Icons.VISIBILITY_OUTLINED
+        )
+        self._qr_eye_btn.tooltip = i18n.t("hide_qr" if self._qr_revealed else "show_qr")
+        self.update()
+
     def _on_qr_rotated(self, token: str, expires_at: datetime):
         """Called from the background thread — must use page.run_task for UI updates."""
         if self.page:
@@ -143,13 +187,16 @@ class ServerView(ft.Column):
             height=180,
             fit=ft.BoxFit.CONTAIN,
         )
-        self._qr_container.visible = True
+        self._qr_container.visible = self._qr_revealed
+        self._qr_placeholder.visible = not self._qr_revealed
 
         local_exp = expires_at.astimezone()
         self._qr_expires_label.value = i18n.t("qr_expires_at").format(
             time=local_exp.strftime("%d/%m/%Y %H:%M:%S")
         )
         self._qr_expires_label.visible = True
+        self._qr_eye_btn.visible = True
+        self._qr_row.visible = True
         self._regen_btn.visible = True
         self.update()
 
@@ -170,7 +217,11 @@ class ServerView(ft.Column):
         self._toggle_btn.icon = ft.Icons.STOP_CIRCLE_OUTLINED if running else ft.Icons.PLAY_CIRCLE_OUTLINED
 
         if not running:
+            self._qr_revealed = True
             self._qr_container.visible = False
+            self._qr_placeholder.visible = False
+            self._qr_eye_btn.visible = False
+            self._qr_row.visible = False
             self._qr_expires_label.visible = False
             self._regen_btn.visible = False
 
