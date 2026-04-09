@@ -29,5 +29,8 @@
   "no_files": "No files shared yet",
   "settings_saved": "Settings saved",
   "invalid_port": "Port must be a number between 1024 and 65535",
-  "invalid_path": "Path cannot be empty"
+  "invalid_path": "Path cannot be empty",
+  "validate_path": "Validate path",
+  "path_ok": "Path is accessible",
+  "path_not_found": "Path not found or not accessible"
 }
