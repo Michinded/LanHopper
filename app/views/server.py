@@ -1,4 +1,5 @@
 import flet as ft
+from flet.controls.services.clipboard import Clipboard
 
 import app.server as server
 from app import config, i18n
@@ -112,10 +113,10 @@ class ServerView(ft.Column):
         self.controls[-1].visible = running  # QR placeholder
         self.update()
 
-    def _copy_url(self, _):
+    async def _copy_url(self, _):
         url = server.get_url()
         if url:
-            self.page.set_clipboard(url)
+            await Clipboard().set(url)
             self.page.show_dialog(ft.SnackBar(
                 content=ft.Text("URL copied to clipboard"),
                 bgcolor=ft.Colors.GREEN_700,
