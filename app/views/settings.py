@@ -156,6 +156,12 @@ class SettingsView(ft.Column):
                         self._field_qr_minutes,
                         self._field_session_minutes,
                         self._field_max_upload,
+                        ft.Text(
+                            "Max: 10 240 MB (10 GB)  ·  1024 MB = 1 GB  ·  2048 MB = 2 GB",
+                            size=11,
+                            color=ft.Colors.GREY_500,
+                            italic=True,
+                        ),
                         self._cb_no_limit,
                         self._warn_no_limit,
 
