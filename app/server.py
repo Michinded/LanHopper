@@ -77,7 +77,6 @@ def generate_qr_token() -> str:
     session["qr_expires_at"] = expires_at
 
     url = f"http://{session['lan_ip']}:{session['port']}/?qr={token}"
-    print(f"[LanHopper] QR URL (valid {minutes} min) →\n  {url}\n")
 
     if _on_qr_rotated:
         _on_qr_rotated(token, expires_at)
@@ -148,9 +147,6 @@ def start(port: int) -> str:
 
     _server_thread = threading.Thread(target=_uvicorn_server.run, daemon=True)
     _server_thread.start()
-
-    print(f"\n[LanHopper] Server started → http://{session['lan_ip']}:{port}")
-    print(f"[LanHopper] Password       → {session['password']}")
 
     generate_qr_token()
 
