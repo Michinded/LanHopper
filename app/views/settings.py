@@ -86,12 +86,30 @@ class SettingsView(ft.Column):
             keyboard_type=ft.KeyboardType.NUMBER,
         )
 
+        _saved_mb = self._cfg.get("max_upload_mb", 512)
+        _unlimited = (_saved_mb == 0)
+
         self._field_max_upload = ft.TextField(
             label=i18n.t("max_upload_mb"),
             hint_text=i18n.t("max_upload_mb_hint"),
-            value=str(self._cfg.get("max_upload_mb", 512)),
+            value=str(_saved_mb if _saved_mb > 0 else 512),
             width=180,
             keyboard_type=ft.KeyboardType.NUMBER,
+            disabled=_unlimited,
+        )
+
+        self._cb_no_limit = ft.Checkbox(
+            label=i18n.t("no_limit"),
+            value=_unlimited,
+            on_change=self._on_no_limit_change,
+        )
+
+        self._warn_no_limit = ft.Text(
+            i18n.t("no_limit_warning"),
+            size=11,
+            color=ft.Colors.AMBER_700,
+            italic=True,
+            visible=_unlimited,
         )
 
         self._lang_dropdown = ft.Dropdown(
@@ -138,6 +156,8 @@ class SettingsView(ft.Column):
                         self._field_qr_minutes,
                         self._field_session_minutes,
                         self._field_max_upload,
+                        self._cb_no_limit,
+                        self._warn_no_limit,
 
                         _section_title(i18n.t("language")),
                         self._lang_dropdown,
@@ -177,6 +197,12 @@ class SettingsView(ft.Column):
         self.page.overlay.remove(self._port_dialog)
 
     # ------------------------------------------------------------ interactions
+
+    def _on_no_limit_change(self, e):
+        unlimited = e.control.value
+        self._field_max_upload.disabled = unlimited
+        self._warn_no_limit.visible = unlimited
+        self.update()
 
     def _on_folder_type_change(self, e):
         is_local = e.control.value == "local"
@@ -280,7 +306,7 @@ class SettingsView(ft.Column):
         }
         self._cfg["qr_token_minutes"] = int(self._field_qr_minutes.value.strip())
         self._cfg["session_minutes"] = int(self._field_session_minutes.value.strip())
-        self._cfg["max_upload_mb"] = int(self._field_max_upload.value.strip())
+        self._cfg["max_upload_mb"] = 0 if self._cb_no_limit.value else int(self._field_max_upload.value.strip())
         self._cfg["language"] = self._lang_dropdown.value
         config.save(self._cfg)
         self._show_snack(i18n.t("settings_saved"))
@@ -302,14 +328,15 @@ class SettingsView(ft.Column):
             return False
         self._field_path.error_text = None
 
-        try:
-            val = int(self._field_max_upload.value.strip())
-            assert 1 <= val <= 10240
-            self._field_max_upload.error_text = None
-        except (ValueError, AssertionError):
-            self._field_max_upload.error_text = i18n.t("max_upload_mb_hint")
-            self._field_max_upload.update()
-            return False
+        if not self._cb_no_limit.value:
+            try:
+                val = int(self._field_max_upload.value.strip())
+                assert 1 <= val <= 10240
+                self._field_max_upload.error_text = None
+            except (ValueError, AssertionError):
+                self._field_max_upload.error_text = i18n.t("max_upload_mb_hint")
+                self._field_max_upload.update()
+                return False
 
         for field in (self._field_qr_minutes, self._field_session_minutes):
             try:

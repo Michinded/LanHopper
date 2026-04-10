@@ -18,7 +18,9 @@ def _shared_path() -> Path:
 
 
 def _max_bytes() -> int:
-    return int(config.load().get("max_upload_mb", 512)) * 1024 * 1024
+    """Return the byte limit, or 0 if unlimited."""
+    mb = int(config.load().get("max_upload_mb", 512))
+    return mb * 1024 * 1024 if mb > 0 else 0
 
 
 @router.post("/")
@@ -37,7 +39,7 @@ async def upload_file(file: UploadFile = File(...)):
         with open(dest, "wb") as out:
             while chunk := await file.read(_CHUNK):
                 written += len(chunk)
-                if written > max_bytes:
+                if max_bytes > 0 and written > max_bytes:
                     too_large = True
                     break
                 out.write(chunk)

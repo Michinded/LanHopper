@@ -20,7 +20,13 @@
       Drop files here or
       <label for="fileInput" class="upload-link">choose files</label>
     </p>
+    {% if max_upload_mb == 0 %}
+    <p class="upload-hint upload-hint-warn">
+      No size limit — very large files may be corrupted depending on hardware and LAN stability.
+    </p>
+    {% else %}
     <p class="upload-hint">Max {{ max_upload_mb }} MB per file</p>
+    {% endif %}
     <input type="file" id="fileInput" multiple hidden>
 
     <div class="upload-progress" id="uploadProgress" hidden>
@@ -115,7 +121,7 @@
   }
 
   function uploadFile(file, onDone) {
-    if (file.size > MAX_BYTES) {
+    if (MAX_MB > 0 && file.size > MAX_BYTES) {
       showMessage('error', '"' + file.name + '" exceeds the ' + MAX_MB + ' MB limit.');
       onDone();
       return;

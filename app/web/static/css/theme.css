@@ -384,6 +384,12 @@ th.col-size, td.size { text-align: right; }
   margin-bottom: 14px;
 }
 
+.upload-hint-warn {
+  color: #b45309;
+  font-style: italic;
+}
+[data-theme="dark"] .upload-hint-warn { color: #f59e0b; }
+
 /* Progress bar */
 .upload-progress {
   margin-top: 12px;
