@@ -117,8 +117,9 @@ class _HomeScreen(ft.Column):
         self._running = False
 
         # ── app identity ──────────────────────────────────────────────
-        self._greeting_label = ft.Text(
-            "", size=14, color=ft.Colors.GREY_500,
+        welcome_line = ft.Text(
+            f'{i18n.t("welcome_greeting")} {meta.APP_NAME}',
+            size=14, color=ft.Colors.GREY_500,
         )
         app_title_row = ft.Row(
             controls=[
@@ -140,6 +141,7 @@ class _HomeScreen(ft.Column):
                 ),
             ],
             spacing=10,
+            alignment=ft.MainAxisAlignment.CENTER,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
         app_subtitle = ft.Text(
@@ -150,6 +152,9 @@ class _HomeScreen(ft.Column):
         )
 
         # ── clock ─────────────────────────────────────────────────────
+        self._greeting_label = ft.Text(
+            "", size=14, color=ft.Colors.GREY_500,
+        )
         self._time_label = ft.Text(
             "", size=52, weight=ft.FontWeight.BOLD, font_family="monospace",
         )
@@ -206,11 +211,13 @@ class _HomeScreen(ft.Column):
         )
 
         self.controls = [
-            self._greeting_label,
-            ft.Container(height=6),
+            welcome_line,
+            ft.Container(height=4),
             app_title_row,
             app_subtitle,
-            ft.Container(height=28),
+            ft.Container(height=32),
+            self._greeting_label,
+            ft.Container(height=2),
             self._time_label,
             self._date_label,
             ft.Container(height=28),
@@ -243,7 +250,7 @@ class _HomeScreen(ft.Column):
             else:
                 greeting = i18n.t("greeting_dawn")
 
-            self._greeting_label.value = f"{i18n.t('welcome_greeting')} {greeting.lower()},"
+            self._greeting_label.value = greeting
             self._time_label.value = now.strftime("%H:%M:%S")
             self._date_label.value = now.strftime("%A, %b %d · %Y")
 
