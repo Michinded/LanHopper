@@ -144,6 +144,8 @@ def browse_page(request: Request):
         ]
     cfg = config.load()
     device_name = cfg.get("device_name", "LanHopper")
+    max_upload_mb = int(cfg.get("max_upload_mb", 512))
     return _get_templates().TemplateResponse(
-        request, "browse.html", {"files": files, "device_name": device_name}
+        request, "browse.html",
+        {"files": files, "device_name": device_name, "max_upload_mb": max_upload_mb},
     )

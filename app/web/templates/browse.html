@@ -12,25 +12,202 @@
 
 {% block content %}
 <div class="browse-container">
-  {% if files %}
-  <table>
-    <thead>
-      <tr>
-        <th>File</th>
-        <th style="text-align:right">Size</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for file in files %}
-      <tr>
-        <td><a href="/files/download/{{ file.name }}">{{ file.name }}</a></td>
-        <td class="size">{{ file.size }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="empty">No files in the shared folder yet.</p>
-  {% endif %}
+
+  <!-- Upload zone -->
+  <div class="upload-zone" id="uploadZone">
+    <div class="upload-icon">&#8679;</div>
+    <p class="upload-label">
+      Drop files here or
+      <label for="fileInput" class="upload-link">choose files</label>
+    </p>
+    <p class="upload-hint">Max {{ max_upload_mb }} MB per file</p>
+    <input type="file" id="fileInput" multiple hidden>
+
+    <div class="upload-progress" id="uploadProgress" hidden>
+      <div class="upload-filename" id="uploadFilename"></div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <span class="progress-pct" id="progressPct">0%</span>
+    </div>
+
+    <div id="uploadMessage"></div>
+  </div>
+
+  <!-- File list -->
+  <div id="fileTableContainer">
+    {% if files %}
+    <table>
+      <thead>
+        <tr>
+          <th>File</th>
+          <th class="col-size">Size</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for file in files %}
+        <tr>
+          <td><a href="/files/download/{{ file.name | urlencode }}">{{ file.name }}</a></td>
+          <td class="size">{{ file.size }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No files in the shared folder yet.</p>
+    {% endif %}
+  </div>
+
 </div>
+
+<script>
+(function () {
+  const MAX_MB = {{ max_upload_mb }};
+  const MAX_BYTES = MAX_MB * 1024 * 1024;
+
+  const zone      = document.getElementById('uploadZone');
+  const fileInput = document.getElementById('fileInput');
+  const progress  = document.getElementById('uploadProgress');
+  const fill      = document.getElementById('progressFill');
+  const pct       = document.getElementById('progressPct');
+  const fname     = document.getElementById('uploadFilename');
+  const msgEl     = document.getElementById('uploadMessage');
+
+  // ---- open file picker on zone click (but not on the label itself) ----
+  zone.addEventListener('click', function (e) {
+    if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') {
+      fileInput.click();
+    }
+  });
+
+  // ---- drag & drop ----
+  zone.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    zone.classList.add('drag-over');
+  });
+  zone.addEventListener('dragleave', function () {
+    zone.classList.remove('drag-over');
+  });
+  zone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) enqueue(Array.from(e.dataTransfer.files));
+  });
+
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files.length) enqueue(Array.from(fileInput.files));
+  });
+
+  // ---- upload queue (one at a time) ----
+  var queue = [];
+  var uploading = false;
+
+  function enqueue(files) {
+    queue = queue.concat(files);
+    if (!uploading) processQueue();
+  }
+
+  function processQueue() {
+    if (!queue.length) { uploading = false; return; }
+    uploading = true;
+    var file = queue.shift();
+    uploadFile(file, processQueue);
+  }
+
+  function uploadFile(file, onDone) {
+    if (file.size > MAX_BYTES) {
+      showMessage('error', '"' + file.name + '" exceeds the ' + MAX_MB + ' MB limit.');
+      onDone();
+      return;
+    }
+
+    fname.textContent = file.name;
+    fill.style.width = '0%';
+    pct.textContent = '0%';
+    progress.hidden = false;
+
+    var fd = new FormData();
+    fd.append('file', file);
+
+    var xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', function (e) {
+      if (e.lengthComputable) {
+        var p = Math.round(e.loaded / e.total * 100);
+        fill.style.width = p + '%';
+        pct.textContent = p + '%';
+      }
+    });
+
+    xhr.addEventListener('load', function () {
+      progress.hidden = true;
+      fileInput.value = '';
+      if (xhr.status === 200) {
+        showMessage('success', '"' + file.name + '" uploaded successfully.');
+        refreshFileList();
+      } else {
+        var detail = 'Upload failed.';
+        try { detail = JSON.parse(xhr.responseText).detail; } catch (e) {}
+        showMessage('error', detail);
+      }
+      onDone();
+    });
+
+    xhr.addEventListener('error', function () {
+      progress.hidden = true;
+      showMessage('error', 'Connection error while uploading "' + file.name + '".');
+      onDone();
+    });
+
+    xhr.open('POST', '/upload/');
+    xhr.send(fd);
+  }
+
+  // ---- refresh file list without page reload ----
+  function refreshFileList() {
+    fetch('/files/')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var container = document.getElementById('fileTableContainer');
+        if (!data.files || !data.files.length) {
+          container.innerHTML = '<p class="empty">No files in the shared folder yet.</p>';
+          return;
+        }
+        var rows = data.files.map(function (f) {
+          return '<tr><td><a href="/files/download/' + encodeURIComponent(f.name) + '">'
+            + escHtml(f.name) + '</a></td>'
+            + '<td class="size">' + fmtSize(f.size) + '</td></tr>';
+        }).join('');
+        container.innerHTML =
+          '<table><thead><tr><th>File</th><th class="col-size">Size</th></tr></thead>'
+          + '<tbody>' + rows + '</tbody></table>';
+      })
+      .catch(function () {});
+  }
+
+  // ---- helpers ----
+  var _msgTimer = null;
+  function showMessage(type, msg) {
+    clearTimeout(_msgTimer);
+    msgEl.className = 'upload-msg ' + type;
+    msgEl.textContent = msg;
+    _msgTimer = setTimeout(function () {
+      msgEl.textContent = '';
+      msgEl.className = '';
+    }, 5000);
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function fmtSize(bytes) {
+    var units = ['B', 'KB', 'MB', 'GB'];
+    var i = 0;
+    while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+    return (i === 0 ? bytes : bytes.toFixed(1)) + ' ' + units[i];
+  }
+})();
+</script>
 {% endblock %}

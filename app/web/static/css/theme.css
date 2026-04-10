@@ -334,3 +334,104 @@ td.size {
   box-shadow: 0 3px 16px var(--color-shadow);
   font-size: 0.95rem;
 }
+
+th.col-size, td.size { text-align: right; }
+
+/* ============================================================
+   Upload zone
+   ============================================================ */
+.upload-zone {
+  background: var(--color-surface);
+  border: 2px dashed var(--color-border);
+  border-radius: 12px;
+  padding: 28px 24px 20px;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 24px;
+  transition: border-color 0.2s, background 0.2s;
+  user-select: none;
+}
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: var(--color-primary);
+  background: var(--color-row-hover);
+}
+
+.upload-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+  color: var(--color-primary);
+  margin-bottom: 8px;
+}
+
+.upload-label {
+  font-size: 0.95rem;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.upload-link {
+  color: var(--color-link);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.upload-link:hover { color: var(--color-link-hover); }
+
+.upload-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-bottom: 14px;
+}
+
+/* Progress bar */
+.upload-progress {
+  margin-top: 12px;
+}
+
+.upload-filename {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.progress-track {
+  height: 6px;
+  background: var(--color-surface-alt);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--color-primary);
+  border-radius: 99px;
+  transition: width 0.1s linear;
+}
+
+.progress-pct {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* Upload status messages */
+.upload-msg {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  padding: 7px 12px;
+  border-radius: 6px;
+}
+.upload-msg.success {
+  color: var(--color-btn-text);
+  background: #1a7a3a;
+}
+.upload-msg.error {
+  color: var(--color-error);
+  background: var(--color-error-bg);
+}

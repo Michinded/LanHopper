@@ -24,6 +24,7 @@ _DEFAULTS = {
     "language": "en",
     "qr_token_minutes": 5,
     "session_minutes": 60,
+    "max_upload_mb": 512,
 }
 
 

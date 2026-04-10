@@ -49,6 +49,8 @@
   "qr_token_minutes": "QR code validity (minutes)",
   "session_minutes": "Session duration (minutes)",
   "minutes_hint": "Min. 1 — Max. 1440",
+  "max_upload_mb": "Max upload size (MB)",
+  "max_upload_mb_hint": "1 – 10240 MB",
   "check_port": "Check port",
   "port_available": "Port {port} is available",
   "port_in_use_title": "Port {port} is in use",

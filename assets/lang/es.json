@@ -49,6 +49,8 @@
   "qr_token_minutes": "Validez del código QR (minutos)",
   "session_minutes": "Duración de sesión (minutos)",
   "minutes_hint": "Mín. 1 — Máx. 1440",
+  "max_upload_mb": "Tamaño máximo de carga (MB)",
+  "max_upload_mb_hint": "1 – 10240 MB",
   "check_port": "Verificar puerto",
   "port_available": "El puerto {port} está disponible",
   "port_in_use_title": "El puerto {port} está en uso",
