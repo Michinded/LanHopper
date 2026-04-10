@@ -1,13 +1,7 @@
 import flet as ft
 from flet.controls.services.url_launcher import UrlLauncher
 
-from app import i18n
-
-APP_VERSION  = "0.9.0"
-DEVELOPER    = "Michinded"
-GITHUB_URL   = "https://github.com/Michinded/LanHopper"
-LICENSE      = "MIT"
-TECH_STACK   = "Python  ·  Flet  ·  FastAPI  ·  uvicorn"
+from app import i18n, meta
 
 
 class AboutView(ft.Column):
@@ -30,7 +24,7 @@ class AboutView(ft.Column):
                         _divider(),
                         _section(
                             i18n.t("developer"),
-                            ft.Text(DEVELOPER, size=14, weight=ft.FontWeight.W_500),
+                            ft.Text(meta.DEVELOPER, size=14, weight=ft.FontWeight.W_500),
                         ),
                         _divider(),
                         _section(
@@ -55,13 +49,13 @@ class AboutView(ft.Column):
                         _divider(),
                         _section(
                             i18n.t("built_with"),
-                            ft.Text(TECH_STACK, size=13, color=ft.Colors.GREY_500,
+                            ft.Text(meta.TECH_STACK, size=13, color=ft.Colors.GREY_500,
                                     font_family="monospace"),
                         ),
                         _divider(),
                         _section(
                             i18n.t("license"),
-                            ft.Text(LICENSE, size=14, weight=ft.FontWeight.W_500),
+                            ft.Text(meta.LICENSE, size=14, weight=ft.FontWeight.W_500),
                         ),
                         ft.Container(height=32),
                     ],
@@ -75,7 +69,7 @@ class AboutView(ft.Column):
 # ------------------------------------------------------------------ helpers
 
 async def _open_github(_):
-    await UrlLauncher().launch_url(GITHUB_URL)
+    await UrlLauncher().launch_url(meta.GITHUB_URL)
 
 
 def _header() -> ft.Container:
@@ -95,7 +89,7 @@ def _header() -> ft.Container:
                         ),
                         ft.Container(
                             content=ft.Text(
-                                f"v{APP_VERSION}",
+                                f"v{meta.APP_VERSION}",
                                 size=12,
                                 weight=ft.FontWeight.W_600,
                                 color=ft.Colors.WHITE,
