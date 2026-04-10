@@ -51,6 +51,8 @@
   "minutes_hint": "Min. 1 — Max. 1440",
   "max_upload_mb": "Max upload size (MB)",
   "max_upload_mb_hint": "1 – 10240 MB",
+  "appearance": "Appearance",
+  "dark_mode": "Dark mode",
   "no_limit": "No limit (not recommended)",
   "no_limit_warning": "Without a size limit, very large files may be corrupted depending on your hardware and LAN stability.",
   "check_port": "Check port",

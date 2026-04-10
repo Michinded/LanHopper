@@ -51,6 +51,8 @@
   "minutes_hint": "Mín. 1 — Máx. 1440",
   "max_upload_mb": "Tamaño máximo de carga (MB)",
   "max_upload_mb_hint": "1 – 10240 MB",
+  "appearance": "Apariencia",
+  "dark_mode": "Modo oscuro",
   "no_limit": "Sin límite (no recomendado)",
   "no_limit_warning": "Sin límite de tamaño, archivos muy grandes pueden corromperse dependiendo de tu hardware y la estabilidad de tu LAN.",
   "check_port": "Verificar puerto",

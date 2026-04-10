@@ -112,6 +112,12 @@ class SettingsView(ft.Column):
             visible=_unlimited,
         )
 
+        self._switch_dark = ft.Switch(
+            label=i18n.t("dark_mode"),
+            value=self._cfg.get("theme", "dark") == "dark",
+            on_change=self._on_theme_change,
+        )
+
         self._lang_dropdown = ft.Dropdown(
             label=i18n.t("language"),
             value=self._cfg.get("language", "en"),
@@ -165,6 +171,9 @@ class SettingsView(ft.Column):
                         self._cb_no_limit,
                         self._warn_no_limit,
 
+                        _section_title(i18n.t("appearance")),
+                        self._switch_dark,
+
                         _section_title(i18n.t("language")),
                         self._lang_dropdown,
                         ft.Text(
@@ -203,6 +212,14 @@ class SettingsView(ft.Column):
         self.page.overlay.remove(self._port_dialog)
 
     # ------------------------------------------------------------ interactions
+
+    def _on_theme_change(self, e):
+        is_dark = e.control.value
+        self.page.theme_mode = ft.ThemeMode.DARK if is_dark else ft.ThemeMode.LIGHT
+        self.page.update()
+        cfg = config.load()
+        cfg["theme"] = "dark" if is_dark else "light"
+        config.save(cfg)
 
     def _on_no_limit_change(self, e):
         unlimited = e.control.value
@@ -313,6 +330,7 @@ class SettingsView(ft.Column):
         self._cfg["qr_token_minutes"] = int(self._field_qr_minutes.value.strip())
         self._cfg["session_minutes"] = int(self._field_session_minutes.value.strip())
         self._cfg["max_upload_mb"] = 0 if self._cb_no_limit.value else int(self._field_max_upload.value.strip())
+        self._cfg["theme"] = "dark" if self._switch_dark.value else "light"
         self._cfg["language"] = self._lang_dropdown.value
         config.save(self._cfg)
         self._show_snack(i18n.t("settings_saved"))
