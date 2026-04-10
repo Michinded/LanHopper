@@ -36,7 +36,7 @@ class HomeView:
                 ft.NavigationRailDestination(
                     icon=ft.Icons.HOME_OUTLINED,
                     selected_icon=ft.Icons.HOME,
-                    label=i18n.t("app_title"),
+                    label=i18n.t("home"),
                 ),
                 ft.NavigationRailDestination(
                     icon=ft.Icons.WIFI_OUTLINED,
