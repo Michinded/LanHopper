@@ -209,6 +209,11 @@ class _HomeScreen(ft.Column):
             width=460,
             visible=False,
         )
+        self._inspire_btn = ft.OutlinedButton(
+            content=i18n.t("inspire"),
+            icon=ft.Icons.LIGHTBULB_OUTLINE,
+            on_click=self._on_inspire,
+        )
 
         self.controls = [
             welcome_line,
@@ -226,12 +231,14 @@ class _HomeScreen(ft.Column):
             self._start_hint,
             ft.Container(height=28),
             self._quote_card,
+            ft.Container(height=10),
+            self._inspire_btn,
         ]
 
     def did_mount(self):
         self._running = True
         self.page.run_task(self._clock_loop)
-        self.page.run_task(self._load_quote)
+        self.page.run_task(self._fetch_and_update_quote)
 
     def will_unmount(self):
         self._running = False
@@ -274,11 +281,31 @@ class _HomeScreen(ft.Column):
                 self.page.update()
             await asyncio.sleep(1)
 
-    async def _load_quote(self):
+    async def _on_inspire(self, _):
+        self.page.run_task(self._fetch_and_update_quote)
+
+    async def _fetch_and_update_quote(self):
+        if not self.page:
+            return
+        self._inspire_btn.disabled = True
+        self.page.update()
+
         loop = asyncio.get_running_loop()
         data = await loop.run_in_executor(_QUOTE_EXECUTOR, _fetch_quote_sync)
-        if data and self._running and self.page:
+
+        if not self.page:
+            return
+
+        if data:
             self._quote_text.value = f'"{data.get("quote", "")}"'
             self._quote_author.value = f'— {data.get("author", "")}'
             self._quote_card.visible = True
-            self.page.update()
+            self._inspire_btn.content = i18n.t("new_quote")
+        else:
+            self.page.show_dialog(ft.SnackBar(
+                content=ft.Text(i18n.t("quote_error")),
+                bgcolor=ft.Colors.ORANGE_700,
+            ))
+
+        self._inspire_btn.disabled = False
+        self.page.update()
