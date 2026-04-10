@@ -13,18 +13,22 @@ from app.views.server import ServerView, _fmt_uptime
 from app.views.settings import SettingsView
 
 _QUOTE_EXECUTOR = ThreadPoolExecutor(max_workers=1)
+_quote_cache: dict | None = None   # persists for the whole app session
 
 
 def _fetch_quote_sync() -> dict | None:
     try:
         req = urllib.request.Request(
-            "https://programming-quotesapi.vercel.app/api/random",
+            "https://zenquotes.io/api/random",
             headers={"User-Agent": "LanHopper/1.0"},
         )
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            return json.loads(resp.read())
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read())
+            if isinstance(data, list) and data:
+                return {"quote": data[0].get("q", ""), "author": data[0].get("a", "")}
     except Exception:
-        return None
+        pass
+    return None
 
 
 class HomeView:
@@ -203,7 +207,8 @@ class _HomeScreen(ft.Column):
                 spacing=8,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=ft.Colors.GREY_100,
+            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE_VARIANT)),
             border_radius=12,
             padding=ft.Padding(left=28, right=28, top=16, bottom=16),
             width=460,
@@ -238,7 +243,11 @@ class _HomeScreen(ft.Column):
     def did_mount(self):
         self._running = True
         self.page.run_task(self._clock_loop)
-        self.page.run_task(self._fetch_and_update_quote)
+        # Show cached quote instantly; only fetch if nothing cached yet
+        if _quote_cache:
+            self._apply_quote(_quote_cache)
+        else:
+            self.page.run_task(self._fetch_and_update_quote)
 
     def will_unmount(self):
         self._running = False
@@ -281,10 +290,17 @@ class _HomeScreen(ft.Column):
                 self.page.update()
             await asyncio.sleep(1)
 
+    def _apply_quote(self, data: dict):
+        self._quote_text.value = f'"{data.get("quote", "")}"'
+        self._quote_author.value = f'— {data.get("author", "")}'
+        self._quote_card.visible = True
+        self._inspire_btn.content = i18n.t("new_quote")
+
     async def _on_inspire(self, _):
         self.page.run_task(self._fetch_and_update_quote)
 
     async def _fetch_and_update_quote(self):
+        global _quote_cache
         if not self.page:
             return
         self._inspire_btn.disabled = True
@@ -297,10 +313,8 @@ class _HomeScreen(ft.Column):
             return
 
         if data:
-            self._quote_text.value = f'"{data.get("quote", "")}"'
-            self._quote_author.value = f'— {data.get("author", "")}'
-            self._quote_card.visible = True
-            self._inspire_btn.content = i18n.t("new_quote")
+            _quote_cache = data
+            self._apply_quote(data)
         else:
             self.page.show_dialog(ft.SnackBar(
                 content=ft.Text(i18n.t("quote_error")),
