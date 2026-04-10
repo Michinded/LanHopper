@@ -1,3 +1,5 @@
+import secrets
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -23,6 +25,25 @@ def _max_bytes() -> int:
     return mb * 1024 * 1024 if mb > 0 else 0
 
 
+def _unique_path(folder: Path, filename: str) -> Path:
+    """Return a path that does not exist in folder.
+
+    If filename is free, return it as-is.
+    Otherwise append _YYYYMMDD_HHMMSS_<4 hex chars> before the extension so
+    every upload is unique and the original name is still recognisable.
+    Example: important.pdf → important_20260409_143022_a3f2.pdf
+    """
+    dest = folder / filename
+    if not dest.exists():
+        return dest
+
+    stem = Path(filename).stem
+    suffix = Path(filename).suffix
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    tag = secrets.token_hex(2)          # 4 hex chars — enough to avoid same-second collisions
+    return folder / f"{stem}_{ts}_{tag}{suffix}"
+
+
 @router.post("/")
 async def upload_file(file: UploadFile = File(...)):
     """Stream an uploaded file to the shared folder, enforcing the configured size limit."""
@@ -30,7 +51,7 @@ async def upload_file(file: UploadFile = File(...)):
 
     shared = _shared_path()
     shared.mkdir(parents=True, exist_ok=True)
-    dest = shared / file.filename
+    dest = _unique_path(shared, file.filename)
 
     written = 0
     too_large = False
@@ -51,4 +72,4 @@ async def upload_file(file: UploadFile = File(...)):
         max_mb = max_bytes // (1024 * 1024)
         raise HTTPException(status_code=413, detail=f"File exceeds the {max_mb} MB limit")
 
-    return {"name": file.filename, "size": written}
+    return {"name": dest.name, "size": written}
