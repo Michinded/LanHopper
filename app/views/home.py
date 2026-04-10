@@ -5,6 +5,7 @@ import flet as ft
 
 import app.server as server
 from app import config, i18n
+from app.views.about import AboutView
 from app.views.server import ServerView, _fmt_uptime
 from app.views.settings import SettingsView
 
@@ -47,6 +48,11 @@ class HomeView:
                     selected_icon=ft.Icons.SETTINGS,
                     label=i18n.t("settings"),
                 ),
+                ft.NavigationRailDestination(
+                    icon=ft.Icons.INFO_OUTLINED,
+                    selected_icon=ft.Icons.INFO,
+                    label=i18n.t("about"),
+                ),
             ],
             on_change=lambda e: self._navigate(e.control.selected_index),
         )
@@ -75,6 +81,8 @@ class HomeView:
             self._content.controls.append(ServerView())
         elif index == 2:
             self._content.controls.append(SettingsView())
+        elif index == 3:
+            self._content.controls.append(AboutView())
 
         self.page.update()
 
