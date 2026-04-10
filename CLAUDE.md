@@ -65,8 +65,37 @@ The app has two parallel runtimes that must coexist:
 - A random **6-character alphanumeric password** is generated on each server start (never stored).
 - A **JWT secret** is generated alongside it (in-memory only).
 - A **single-use QR token** (short-lived JWT with `jti`) is generated immediately and rotated on a background thread every `qr_token_minutes`. Scanning the QR exchanges the token for a session cookie.
-- `app/middleware/auth.py` validates requests via Bearer header (API clients) or `access_token` cookie (browser). Public paths: `/`, `/web/login`, `/auth/login`, `/logout`.
+- `app/middleware/auth.py` validates requests via Bearer header (API clients) or `access_token` cookie (browser). Public paths: `/`, `/web/login`, `/auth/login`, `/logout`, `/static/*`.
 - Sessions do not survive a server restart by design.
+
+## File serving security (path traversal prevention)
+
+All file downloads go through `_safe_path()` in `app/api/files.py`:
+
+```python
+def _safe_path(shared: Path, user_input: str) -> Path:
+    resolved = (shared / user_input).resolve()   # collapses .., follows symlinks
+    resolved.relative_to(shared.resolve())        # raises ValueError if outside root
+    return resolved
+```
+
+**Two defence layers in practice:**
+1. **uvicorn** rejects requests with `%2F` (encoded slash) in the path at the HTTP protocol level — the request never reaches the application.
+2. **`_safe_path`** catches everything else: plain `../`, multi-level escapes, and symlinks pointing outside the shared root.
+
+**Rule:** every filesystem operation that takes user-supplied input must go through `_safe_path` before touching the disk. Never construct a `Path` from user input directly.
+
+## Subfolder support — future implementation guide
+
+The current file API serves only the flat top-level of the shared folder. When subfolder browsing is added, start from `app/api/files.py` where the full design notes live. Key points:
+
+- Change `{filename}` → `{path:path}` in route definitions so FastAPI captures slashes.
+- `_safe_path(shared, path)` works unchanged for any depth — no changes needed to the security guard.
+- Add a `/browse/{path:path}` listing endpoint that returns `{"dirs": [...], "files": [...]}`.
+- Apply `_safe_path` to the **directory path** too before calling `iterdir()`.
+- Never expose absolute paths to the client — only paths relative to the shared root.
+- Frontend needs breadcrumb navigation and a path-aware `FILES` model instead of the current flat array.
+- Upload endpoint (`app/api/upload.py`) must accept a target subdirectory as a form field and validate it with `_safe_path` before writing.
 
 ## Config and i18n
 
