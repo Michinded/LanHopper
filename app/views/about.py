@@ -132,7 +132,7 @@ def _section(title: str, content: ft.Control) -> ft.Container:
                     size=11,
                     weight=ft.FontWeight.W_700,
                     color=ft.Colors.GREY_500,
-                    letter_spacing=1.2,
+                    style=ft.TextStyle(letter_spacing=1.2),
                 ),
                 content,
             ],
