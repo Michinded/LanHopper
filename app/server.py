@@ -38,6 +38,7 @@ session: dict = {
     "qr_token": None,
     "qr_expires_at": None,
     "used_qr_tokens": set(),
+    "start_time": None,
 }
 
 _server_thread: threading.Thread | None = None
@@ -141,6 +142,7 @@ def start(port: int) -> str:
     session["port"] = port
     session["lan_ip"] = get_lan_ip()
     session["used_qr_tokens"] = set()
+    session["start_time"] = datetime.now(timezone.utc)
 
     config = uvicorn.Config(_build_app(), host="0.0.0.0", port=port, log_level="warning")
     _uvicorn_server = uvicorn.Server(config)
@@ -183,6 +185,7 @@ def stop() -> None:
         "qr_token": None,
         "qr_expires_at": None,
         "used_qr_tokens": set(),
+        "start_time": None,
     })
 
 

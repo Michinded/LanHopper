@@ -51,6 +51,7 @@
   "minutes_hint": "Min. 1 — Max. 1440",
   "max_upload_mb": "Max upload size (MB)",
   "max_upload_mb_hint": "1 – 10240 MB",
+  "uptime": "Uptime",
   "appearance": "Appearance",
   "dark_mode": "Dark mode",
   "no_limit": "No limit (not recommended)",

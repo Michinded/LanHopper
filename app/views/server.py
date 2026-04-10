@@ -1,9 +1,26 @@
+import asyncio
 from datetime import datetime, timezone
 import flet as ft
 from flet.controls.services.clipboard import Clipboard
 
 import app.server as server
 from app import config, i18n
+
+
+def _fmt_uptime(seconds: int) -> str:
+    """Format elapsed seconds as a human-readable uptime string.
+    Only shows the relevant units: '43s', '5m 09s', '2h 14m 03s', '1d 03h 22m 11s'.
+    """
+    d, rem = divmod(seconds, 86400)
+    h, rem = divmod(rem, 3600)
+    m, s   = divmod(rem, 60)
+    if d:
+        return f"{d}d {h:02d}h {m:02d}m {s:02d}s"
+    if h:
+        return f"{h}h {m:02d}m {s:02d}s"
+    if m:
+        return f"{m}m {s:02d}s"
+    return f"{s}s"
 
 
 class ServerView(ft.Column):
@@ -15,18 +32,21 @@ class ServerView(ft.Column):
             spacing=20,
         )
         self._running = server.is_running()
+        self._uptime_running = False
         self._build()
 
     # ---------------------------------------------------- lifecycle
 
     def did_mount(self):
         server.set_qr_callback(self._on_qr_rotated)
-        # If server is already running when we navigate here, load the current QR
         if self._running and server.session.get("qr_token"):
             self._update_qr(server.session["qr_token"], server.session["qr_expires_at"])
+        if self._running:
+            self._start_uptime_loop()
 
     def will_unmount(self):
         server.set_qr_callback(None)
+        self._uptime_running = False
 
     # ----------------------------------------------------------------- build
 
@@ -40,6 +60,14 @@ class ServerView(ft.Column):
             i18n.t("server_running") if self._running else i18n.t("server_stopped"),
             size=13,
             color=ft.Colors.GREEN_700 if self._running else ft.Colors.GREY_500,
+        )
+
+        self._uptime_label = ft.Text(
+            "",
+            size=12,
+            color=ft.Colors.GREY_500,
+            italic=True,
+            visible=self._running,
         )
 
         self._url_field = ft.TextField(
@@ -124,6 +152,7 @@ class ServerView(ft.Column):
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=8,
             ),
+            self._uptime_label,
             self._toggle_btn,
             self._url_field,
             self._password_field,
@@ -138,6 +167,21 @@ class ServerView(ft.Column):
             self._regen_btn,
         ]
         self._qr_row = self.controls[-2]
+
+    # ------------------------------------------------------------ uptime loop
+
+    def _start_uptime_loop(self):
+        self._uptime_running = True
+        self.page.run_task(self._uptime_loop)
+
+    async def _uptime_loop(self):
+        while self._uptime_running and server.is_running():
+            start = server.session.get("start_time")
+            if start and self.page:
+                elapsed = int((datetime.now(timezone.utc) - start).total_seconds())
+                self._uptime_label.value = f"{i18n.t('uptime')}: {_fmt_uptime(elapsed)}"
+                self._uptime_label.update()
+            await asyncio.sleep(1)
 
     # ------------------------------------------------------------ interactions
 
@@ -215,6 +259,14 @@ class ServerView(ft.Column):
 
         self._toggle_btn.content = i18n.t("stop_server") if running else i18n.t("start_server")
         self._toggle_btn.icon = ft.Icons.STOP_CIRCLE_OUTLINED if running else ft.Icons.PLAY_CIRCLE_OUTLINED
+
+        self._uptime_label.visible = running
+        if running:
+            self._uptime_label.value = f"{i18n.t('uptime')}: 0s"
+            self._start_uptime_loop()
+        else:
+            self._uptime_running = False
+            self._uptime_label.value = ""
 
         if not running:
             self._qr_revealed = True

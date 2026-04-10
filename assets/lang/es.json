@@ -51,6 +51,7 @@
   "minutes_hint": "Mín. 1 — Máx. 1440",
   "max_upload_mb": "Tamaño máximo de carga (MB)",
   "max_upload_mb_hint": "1 – 10240 MB",
+  "uptime": "Tiempo activo",
   "appearance": "Apariencia",
   "dark_mode": "Modo oscuro",
   "no_limit": "Sin límite (no recomendado)",
