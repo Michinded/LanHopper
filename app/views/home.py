@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import flet as ft
 
 import app.server as server
-from app import config, i18n
+from app import config, i18n, meta
 from app.views.about import AboutView
 from app.views.server import ServerView, _fmt_uptime
 from app.views.settings import SettingsView
@@ -116,10 +116,40 @@ class _HomeScreen(ft.Column):
         )
         self._running = False
 
-        # ── clock / greeting ──────────────────────────────────────────
+        # ── app identity ──────────────────────────────────────────────
         self._greeting_label = ft.Text(
-            "", size=16, color=ft.Colors.GREY_500,
+            "", size=14, color=ft.Colors.GREY_500,
         )
+        app_title_row = ft.Row(
+            controls=[
+                ft.Text(
+                    meta.APP_NAME,
+                    size=34,
+                    weight=ft.FontWeight.BOLD,
+                ),
+                ft.Container(
+                    content=ft.Text(
+                        f"v{meta.APP_VERSION}",
+                        size=11,
+                        weight=ft.FontWeight.W_600,
+                        color=ft.Colors.WHITE,
+                    ),
+                    bgcolor=ft.Colors.BLUE_700,
+                    border_radius=20,
+                    padding=ft.Padding(left=10, right=10, top=4, bottom=4),
+                ),
+            ],
+            spacing=10,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+        app_subtitle = ft.Text(
+            i18n.t("app_subtitle"),
+            size=13,
+            color=ft.Colors.GREY_500,
+            italic=True,
+        )
+
+        # ── clock ─────────────────────────────────────────────────────
         self._time_label = ft.Text(
             "", size=52, weight=ft.FontWeight.BOLD, font_family="monospace",
         )
@@ -127,10 +157,10 @@ class _HomeScreen(ft.Column):
             "", size=13, color=ft.Colors.GREY_500,
         )
 
-        # ── server status pill ────────────────────────────────────────
+        # ── server status (plain text, no pill) ───────────────────────
         running = server.is_running()
         self._status_dot = ft.Container(
-            width=8, height=8,
+            width=7, height=7,
             bgcolor=ft.Colors.GREEN_500 if running else ft.Colors.GREY_400,
             border_radius=4,
         )
@@ -139,18 +169,18 @@ class _HomeScreen(ft.Column):
             size=13,
             color=ft.Colors.GREEN_700 if running else ft.Colors.GREY_500,
         )
-        self._status_pill = ft.Container(
-            content=ft.Row(
-                controls=[self._status_dot, self._status_label],
-                spacing=8,
-                tight=True,
-            ),
-            bgcolor=ft.Colors.GREEN_100 if running else ft.Colors.GREY_100,
-            border_radius=20,
-            padding=ft.Padding(left=16, right=16, top=8, bottom=8),
+        self._status_row = ft.Row(
+            controls=[self._status_dot, self._status_label],
+            spacing=7,
+            tight=True,
         )
         self._uptime_label = ft.Text(
             "", size=11, color=ft.Colors.GREY_400, italic=True, visible=False,
+        )
+        self._start_hint = ft.Text(
+            i18n.t("server_start_hint"),
+            size=11, color=ft.Colors.GREY_400, italic=True,
+            visible=not running,
         )
 
         # ── quote card ────────────────────────────────────────────────
@@ -177,14 +207,17 @@ class _HomeScreen(ft.Column):
 
         self.controls = [
             self._greeting_label,
-            ft.Container(height=2),
+            ft.Container(height=6),
+            app_title_row,
+            app_subtitle,
+            ft.Container(height=28),
             self._time_label,
             self._date_label,
-            ft.Container(height=32),
-            self._status_pill,
-            ft.Container(height=4),
+            ft.Container(height=28),
+            self._status_row,
             self._uptime_label,
-            ft.Container(height=32),
+            self._start_hint,
+            ft.Container(height=28),
             self._quote_card,
         ]
 
@@ -210,7 +243,7 @@ class _HomeScreen(ft.Column):
             else:
                 greeting = i18n.t("greeting_dawn")
 
-            self._greeting_label.value = greeting
+            self._greeting_label.value = f"{i18n.t('welcome_greeting')} {greeting.lower()},"
             self._time_label.value = now.strftime("%H:%M:%S")
             self._date_label.value = now.strftime("%A, %b %d · %Y")
 
@@ -218,7 +251,6 @@ class _HomeScreen(ft.Column):
             self._status_dot.bgcolor = ft.Colors.GREEN_500 if running else ft.Colors.GREY_400
             self._status_label.value = i18n.t("server_running") if running else i18n.t("server_stopped")
             self._status_label.color = ft.Colors.GREEN_700 if running else ft.Colors.GREY_500
-            self._status_pill.bgcolor = ft.Colors.GREEN_100 if running else ft.Colors.GREY_100
 
             if running:
                 start = server.session.get("start_time")
@@ -226,8 +258,10 @@ class _HomeScreen(ft.Column):
                     elapsed = int((datetime.now(timezone.utc) - start).total_seconds())
                     self._uptime_label.value = f"{i18n.t('uptime')}: {_fmt_uptime(elapsed)}"
                     self._uptime_label.visible = True
+                self._start_hint.visible = False
             else:
                 self._uptime_label.visible = False
+                self._start_hint.visible = True
 
             if self.page:
                 self.page.update()
