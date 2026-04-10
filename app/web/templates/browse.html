@@ -34,56 +34,66 @@
   <div class="staging-area" id="stagingArea" hidden>
     <div class="staging-header">
       <span class="staging-title">Pending upload</span>
-      <button class="staging-clear-btn" id="btnClearAll" onclick="clearPending()">
-        Clear all
-      </button>
+      <button class="staging-clear-btn" id="btnClearAll" onclick="clearPending()">Clear all</button>
     </div>
     <div class="staging-list" id="stagingList"></div>
     <div class="staging-footer">
       <span class="staging-count" id="stagingCount"></span>
-      <button class="btn-upload-all" id="btnUploadAll" onclick="startUpload()">
-        Upload
-      </button>
+      <button class="btn-upload-all" id="btnUploadAll" onclick="startUpload()">Upload</button>
     </div>
   </div>
 
-  <!-- File list -->
-  <div id="fileTableContainer">
-    {% if files %}
-    <table>
-      <thead>
-        <tr>
-          <th>File</th>
-          <th class="col-size">Size</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for file in files %}
-        <tr>
-          <td><a href="/files/download/{{ file.name | urlencode }}">{{ file.name }}</a></td>
-          <td class="size">{{ file.size }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p class="empty">No files in the shared folder yet.</p>
-    {% endif %}
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="filter-search-wrap">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="search" id="searchInput" class="filter-search" placeholder="Search files…"
+             oninput="onFilterChange()" autocomplete="off" spellcheck="false">
+    </div>
+    <select id="extFilter" class="filter-select" onchange="onFilterChange()">
+      <option value="">All types</option>
+    </select>
+    <button id="btnClearFilters" class="btn-clear-filters" onclick="clearFilters()" hidden>
+      &#10005; Clear
+    </button>
+    <span class="filter-count" id="filterCount"></span>
+  </div>
+
+  <!-- File table -->
+  <div id="fileTableContainer"></div>
+
+  <!-- Pagination -->
+  <div class="pagination" id="pagination" hidden>
+    <button class="page-btn" id="btnPrev" onclick="changePage(-1)">&#8592; Prev</button>
+    <span class="page-info" id="pageInfo"></span>
+    <button class="page-btn" id="btnNext" onclick="changePage(1)">Next &#8594;</button>
   </div>
 
 </div>
+
+<!-- Embed file data for JS -->
+<script>
+var FILES = {{ files | tojson }};
+</script>
 
 <script>
 (function () {
   var MAX_MB    = {{ max_upload_mb }};
   var MAX_BYTES = MAX_MB * 1024 * 1024;
+  var PAGE_SIZE = 50;
 
-  // ---- state ----
+  /* ================================================================
+     State
+  ================================================================ */
+  var state = { search: '', ext: '', page: 0 };
+
+  /* ================================================================
+     Upload — staging queue
+  ================================================================ */
   var nextId      = 0;
-  var queue       = [];   // {id, file, status: 'pending'|'uploading'|'done'|'error', error?}
+  var queue       = [];
   var isUploading = false;
 
-  // ---- DOM refs ----
   var zone        = document.getElementById('uploadZone');
   var fileInput   = document.getElementById('fileInput');
   var stagingArea = document.getElementById('stagingArea');
@@ -92,15 +102,11 @@
   var btnUpload   = document.getElementById('btnUploadAll');
   var btnClear    = document.getElementById('btnClearAll');
 
-  // ---- drop zone events ----
   zone.addEventListener('click', function (e) {
     if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') fileInput.click();
   });
-  zone.addEventListener('dragover', function (e) {
-    e.preventDefault();
-    zone.classList.add('drag-over');
-  });
-  zone.addEventListener('dragleave', function () { zone.classList.remove('drag-over'); });
+  zone.addEventListener('dragover',  function (e) { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', function ()  { zone.classList.remove('drag-over'); });
   zone.addEventListener('drop', function (e) {
     e.preventDefault();
     zone.classList.remove('drag-over');
@@ -111,97 +117,74 @@
     fileInput.value = '';
   });
 
-  // ---- queue management ----
   function addFiles(files) {
     var rejected = [];
     files.forEach(function (f) {
-      if (MAX_MB > 0 && f.size > MAX_BYTES) {
-        rejected.push(f.name);
-        return;
-      }
+      if (MAX_MB > 0 && f.size > MAX_BYTES) { rejected.push(f.name); return; }
       queue.push({ id: nextId++, file: f, status: 'pending' });
     });
-    if (rejected.length) {
+    if (rejected.length)
       alert('The following files exceed the ' + MAX_MB + ' MB limit and were not added:\n\n' + rejected.join('\n'));
-    }
-    render();
+    renderQueue();
   }
 
   window.removeFile = function (id) {
-    queue = queue.filter(function (item) { return item.id !== id; });
-    render();
+    queue = queue.filter(function (i) { return i.id !== id; });
+    renderQueue();
   };
-
   window.clearPending = function () {
-    queue = queue.filter(function (item) { return item.status !== 'pending'; });
-    render();
+    queue = queue.filter(function (i) { return i.status !== 'pending'; });
+    renderQueue();
   };
 
-  // ---- render staging list ----
-  function render() {
-    var hasPending   = queue.some(function (i) { return i.status === 'pending'; });
-    var hasAnything  = queue.length > 0;
-
-    stagingArea.hidden = !hasAnything;
+  function renderQueue() {
+    var hasPending  = queue.some(function (i) { return i.status === 'pending'; });
+    stagingArea.hidden = !queue.length;
 
     stagingList.innerHTML = queue.map(function (item) {
-      var progressHtml = '';
-      var statusHtml   = '';
-      var removeHtml   = '';
-
+      var progressHtml = '', statusHtml = '', removeHtml = '';
       if (item.status === 'uploading') {
         progressHtml =
           '<div class="staged-progress">' +
-            '<div class="progress-track">' +
-              '<div class="progress-fill" id="pf-' + item.id + '"></div>' +
-            '</div>' +
+            '<div class="progress-track"><div class="progress-fill" id="pf-' + item.id + '"></div></div>' +
             '<span class="progress-pct" id="pp-' + item.id + '">0%</span>' +
           '</div>';
       } else if (item.status === 'done') {
         statusHtml = '<span class="staged-badge done">&#10003;</span>';
       } else if (item.status === 'error') {
         statusHtml = '<span class="staged-badge error" title="' + escHtml(item.error || 'Failed') + '">&#10007;</span>';
-        removeHtml = '<button class="staged-remove" onclick="removeFile(' + item.id + ')" title="Remove">&#10005;</button>';
+        removeHtml = '<button class="staged-remove" onclick="removeFile(' + item.id + ')">&#10005;</button>';
       } else {
-        // pending
-        removeHtml = '<button class="staged-remove" onclick="removeFile(' + item.id + ')" title="Remove">&#10005;</button>';
+        removeHtml = '<button class="staged-remove" onclick="removeFile(' + item.id + ')">&#10005;</button>';
       }
-
       return '<div class="staged-file staged-' + item.status + '">' +
         '<div class="staged-info">' +
           '<span class="staged-name" title="' + escHtml(item.file.name) + '">' + escHtml(item.file.name) + '</span>' +
           '<span class="staged-size">' + fmtSize(item.file.size) + '</span>' +
         '</div>' +
-        progressHtml +
-        statusHtml +
-        removeHtml +
+        progressHtml + statusHtml + removeHtml +
       '</div>';
     }).join('');
 
-    // footer count
-    var pending     = queue.filter(function (i) { return i.status === 'pending'; });
-    var totalSize   = pending.reduce(function (acc, i) { return acc + i.file.size; }, 0);
-    var doneCount   = queue.filter(function (i) { return i.status === 'done'; }).length;
-    var errorCount  = queue.filter(function (i) { return i.status === 'error'; }).length;
-
+    var pending   = queue.filter(function (i) { return i.status === 'pending'; });
+    var totalSize = pending.reduce(function (acc, i) { return acc + i.file.size; }, 0);
+    var done      = queue.filter(function (i) { return i.status === 'done'; }).length;
+    var errors    = queue.filter(function (i) { return i.status === 'error'; }).length;
     var parts = [];
-    if (pending.length)  parts.push(pending.length + ' pending (' + fmtSize(totalSize) + ')');
-    if (doneCount)       parts.push(doneCount + ' done');
-    if (errorCount)      parts.push(errorCount + ' failed');
+    if (pending.length) parts.push(pending.length + ' pending (' + fmtSize(totalSize) + ')');
+    if (done)           parts.push(done + ' done');
+    if (errors)         parts.push(errors + ' failed');
     countEl.textContent = parts.join('  ·  ');
 
-    btnUpload.textContent = pending.length === 1
-      ? 'Upload 1 file'
-      : 'Upload ' + pending.length + ' files';
-    btnUpload.disabled = isUploading || !hasPending;
-    btnClear.style.display = hasPending && !isUploading ? '' : 'none';
+    btnUpload.textContent = pending.length === 1 ? 'Upload 1 file' : 'Upload ' + pending.length + ' files';
+    btnUpload.disabled    = isUploading || !hasPending;
+    btnClear.style.display = (hasPending && !isUploading) ? '' : 'none';
   }
 
-  // ---- upload ----
   window.startUpload = function () {
     if (isUploading) return;
     isUploading = true;
-    render();
+    renderQueue();
     uploadNext();
   };
 
@@ -210,21 +193,18 @@
     for (var i = 0; i < queue.length; i++) {
       if (queue[i].status === 'pending') { next = queue[i]; break; }
     }
-
     if (!next) {
       isUploading = false;
-      refreshFileList();
-      render();
-      // Auto-remove done entries after 3 s
+      refreshFiles();
+      renderQueue();
       setTimeout(function () {
         queue = queue.filter(function (i) { return i.status !== 'done'; });
-        render();
+        renderQueue();
       }, 3000);
       return;
     }
-
     next.status = 'uploading';
-    render();
+    renderQueue();
 
     var fd  = new FormData();
     fd.append('file', next.file);
@@ -232,14 +212,13 @@
 
     xhr.upload.addEventListener('progress', function (e) {
       if (e.lengthComputable) {
-        var p    = Math.round(e.loaded / e.total * 100);
+        var p = Math.round(e.loaded / e.total * 100);
         var fill = document.getElementById('pf-' + next.id);
         var pct  = document.getElementById('pp-' + next.id);
         if (fill) fill.style.width = p + '%';
         if (pct)  pct.textContent  = p + '%';
       }
     });
-
     xhr.addEventListener('load', function () {
       if (xhr.status === 200) {
         next.status = 'done';
@@ -248,55 +227,187 @@
         try { next.error = JSON.parse(xhr.responseText).detail; }
         catch (e) { next.error = 'Upload failed (HTTP ' + xhr.status + ')'; }
       }
-      render();
+      renderQueue();
       uploadNext();
     });
-
     xhr.addEventListener('error', function () {
       next.status = 'error';
       next.error  = 'Connection error';
-      render();
+      renderQueue();
       uploadNext();
     });
-
     xhr.open('POST', '/upload/');
     xhr.send(fd);
   }
 
-  // ---- refresh file table ----
-  function refreshFileList() {
+  /* ================================================================
+     File list — filter, render, paginate
+  ================================================================ */
+
+  // Populate extension filter from current file list
+  function buildExtFilter() {
+    var seen = {};
+    FILES.forEach(function (f) {
+      var ext = extOf(f.name);
+      if (ext) seen[ext] = true;
+    });
+    var exts = Object.keys(seen).sort();
+    var sel  = document.getElementById('extFilter');
+    // Remove all but the first option ("All types")
+    while (sel.options.length > 1) sel.remove(1);
+    exts.forEach(function (ext) {
+      var opt = document.createElement('option');
+      opt.value = ext;
+      opt.textContent = '.' + ext.toUpperCase();
+      sel.appendChild(opt);
+    });
+  }
+
+  function filteredFiles() {
+    var q = state.search.toLowerCase();
+    return FILES.filter(function (f) {
+      var matchSearch = !q || f.name.toLowerCase().indexOf(q) !== -1;
+      var matchExt    = !state.ext || extOf(f.name) === state.ext;
+      return matchSearch && matchExt;
+    });
+  }
+
+  function renderTable() {
+    var list  = filteredFiles();
+    var total = list.length;
+    var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    state.page = Math.min(state.page, pages - 1);
+    var slice = list.slice(state.page * PAGE_SIZE, (state.page + 1) * PAGE_SIZE);
+
+    var container = document.getElementById('fileTableContainer');
+    var countEl2  = document.getElementById('filterCount');
+    var pager     = document.getElementById('pagination');
+    var btnClearF = document.getElementById('btnClearFilters');
+    var hasFilter = state.search || state.ext;
+
+    // Count label
+    if (hasFilter) {
+      countEl2.textContent = total + ' of ' + FILES.length + ' file' + (FILES.length !== 1 ? 's' : '');
+    } else {
+      countEl2.textContent = FILES.length + ' file' + (FILES.length !== 1 ? 's' : '');
+    }
+    btnClearF.hidden = !hasFilter;
+
+    // Empty states
+    if (FILES.length === 0) {
+      container.innerHTML = '<p class="empty">No files in the shared folder yet.</p>';
+      pager.hidden = true;
+      return;
+    }
+    if (total === 0) {
+      container.innerHTML = '<p class="empty">No files match your search.</p>';
+      pager.hidden = true;
+      return;
+    }
+
+    // Table
+    var rows = slice.map(function (f) {
+      var ext     = extOf(f.name);
+      var badge   = ext
+        ? '<span class="ext-badge">' + escHtml(ext.toUpperCase()) + '</span>'
+        : '<span class="ext-badge ext-badge-none">—</span>';
+      var dlUrl   = '/files/download/' + encodeURIComponent(f.name);
+      return '<tr>' +
+        '<td class="col-name">' + badge +
+          '<a href="' + dlUrl + '">' + escHtml(f.name) + '</a>' +
+        '</td>' +
+        '<td class="size">' + f.size + '</td>' +
+        '<td class="col-action">' +
+          '<a href="' + dlUrl + '" class="btn-download" download title="Download">&#8659;</a>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+
+    container.innerHTML =
+      '<table>' +
+        '<thead><tr>' +
+          '<th>File</th>' +
+          '<th class="col-size">Size</th>' +
+          '<th class="col-action-head"></th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>';
+
+    // Pagination
+    if (pages <= 1) {
+      pager.hidden = true;
+    } else {
+      pager.hidden = false;
+      document.getElementById('pageInfo').textContent =
+        'Page ' + (state.page + 1) + ' of ' + pages +
+        ' (' + total + ' files)';
+      document.getElementById('btnPrev').disabled = state.page === 0;
+      document.getElementById('btnNext').disabled = state.page >= pages - 1;
+    }
+  }
+
+  window.onFilterChange = function () {
+    state.search = document.getElementById('searchInput').value;
+    state.ext    = document.getElementById('extFilter').value;
+    state.page   = 0;
+    renderTable();
+  };
+
+  window.clearFilters = function () {
+    state.search = '';
+    state.ext    = '';
+    state.page   = 0;
+    document.getElementById('searchInput').value  = '';
+    document.getElementById('extFilter').value    = '';
+    renderTable();
+  };
+
+  window.changePage = function (delta) {
+    state.page += delta;
+    renderTable();
+    document.getElementById('fileTableContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  /* ================================================================
+     Refresh after upload
+  ================================================================ */
+  function refreshFiles() {
     fetch('/files/')
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        var container = document.getElementById('fileTableContainer');
-        if (!data.files || !data.files.length) {
-          container.innerHTML = '<p class="empty">No files in the shared folder yet.</p>';
-          return;
-        }
-        var rows = data.files.map(function (f) {
-          return '<tr><td><a href="/files/download/' + encodeURIComponent(f.name) + '">'
-            + escHtml(f.name) + '</a></td>'
-            + '<td class="size">' + fmtSize(f.size) + '</td></tr>';
-        }).join('');
-        container.innerHTML =
-          '<table><thead><tr><th>File</th><th class="col-size">Size</th></tr></thead>'
-          + '<tbody>' + rows + '</tbody></table>';
+        FILES = (data.files || []).map(function (f) {
+          return { name: f.name, size: fmtSize(f.size), raw_size: f.size };
+        });
+        buildExtFilter();
+        renderTable();
       })
       .catch(function () {});
   }
 
-  // ---- helpers ----
+  /* ================================================================
+     Helpers
+  ================================================================ */
+  function extOf(name) {
+    var dot = name.lastIndexOf('.');
+    return (dot > 0 && dot < name.length - 1) ? name.slice(dot + 1).toLowerCase() : '';
+  }
+
   function escHtml(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function fmtSize(bytes) {
-    var units = ['B', 'KB', 'MB', 'GB'];
+    var units = ['B','KB','MB','GB'];
     var i = 0;
     while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
     return (i === 0 ? bytes : bytes.toFixed(1)) + '\u00a0' + units[i];
   }
+
+  /* ================================================================
+     Init
+  ================================================================ */
+  buildExtFilter();
+  renderTable();
 })();
 </script>
 {% endblock %}

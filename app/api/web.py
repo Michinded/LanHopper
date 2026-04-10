@@ -138,7 +138,7 @@ def browse_page(request: Request):
     files = []
     if path.exists():
         files = [
-            {"name": f.name, "size": _fmt_size(f.stat().st_size)}
+            {"name": f.name, "size": _fmt_size(f.stat().st_size), "raw_size": f.stat().st_size}
             for f in sorted(path.iterdir(), key=lambda f: f.name.lower())
             if f.is_file()
         ]
