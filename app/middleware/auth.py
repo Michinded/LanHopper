@@ -19,7 +19,7 @@ def _extract_token(request: Request) -> str | None:
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        if request.url.path in _PUBLIC_PATHS:
+        if request.url.path in _PUBLIC_PATHS or request.url.path.startswith("/static/"):
             return await call_next(request)
 
         token = _extract_token(request)

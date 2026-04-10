@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}LanHopper — {{ device_name }}{% endblock %}
+
+{% block navbar_center %}
+  <span class="navbar-device">{{ device_name }}</span>
+{% endblock %}
+
+{% block navbar_actions %}
+  <a href="/logout" class="btn-logout">Log out</a>
+{% endblock %}
+
+{% block content %}
+<div class="browse-container">
+  {% if files %}
+  <table>
+    <thead>
+      <tr>
+        <th>File</th>
+        <th style="text-align:right">Size</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for file in files %}
+      <tr>
+        <td><a href="/files/download/{{ file.name }}">{{ file.name }}</a></td>
+        <td class="size">{{ file.size }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No files in the shared folder yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

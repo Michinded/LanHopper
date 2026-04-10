@@ -3,17 +3,27 @@ import io
 import secrets
 import socket
 import string
+import sys
 import threading
 import uvicorn
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Callable
 
 import qrcode
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from jose import jwt
 
 from app.api import auth, files, upload, web
 from app.middleware.auth import AuthMiddleware
+
+
+def _static_dir() -> Path:
+    """Resolve app/web/static/ — works in dev and as a PyInstaller bundle."""
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / "app" / "web" / "static"
+    return Path(__file__).parent / "web" / "static"
 
 def _qr_minutes() -> int:
     from app import config
@@ -115,6 +125,7 @@ def _qr_rotation_loop(stop_event: threading.Event, reset_event: threading.Event)
 def _build_app() -> FastAPI:
     app = FastAPI(title="LanHopper", docs_url=None, redoc_url=None)
     app.add_middleware(AuthMiddleware)
+    app.mount("/static", StaticFiles(directory=str(_static_dir())), name="static")
     app.include_router(web.router)
     app.include_router(auth.router, prefix="/auth")
     app.include_router(files.router, prefix="/files")

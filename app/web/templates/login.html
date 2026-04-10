@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}LanHopper — Login{% endblock %}
+
+{% block content %}
+<div class="login-wrapper">
+  <div class="card">
+    <h1>LanHopper</h1>
+    <p class="subtitle">Enter the session password</p>
+
+    {% if qr_expired %}
+      <p class="error">QR code expired or already used. Enter the password instead.</p>
+    {% elif error %}
+      <p class="error">Incorrect password. Try again.</p>
+    {% endif %}
+
+    <form method="post" action="/web/login">
+      <input type="password" name="password" autofocus autocomplete="off" placeholder="••••••">
+      <button type="submit">Connect</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
