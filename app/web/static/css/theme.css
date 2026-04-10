@@ -426,18 +426,181 @@ th.col-size, td.size { text-align: right; }
   color: var(--color-text-muted);
 }
 
-/* Upload status messages */
-.upload-msg {
-  margin-top: 10px;
-  font-size: 0.85rem;
-  padding: 7px 12px;
-  border-radius: 6px;
+/* ============================================================
+   Staging queue
+   ============================================================ */
+.staging-area {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 3px 16px var(--color-shadow);
+  transition: background 0.25s ease;
 }
-.upload-msg.success {
-  color: var(--color-btn-text);
-  background: #1a7a3a;
+
+.staging-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--color-th-bg);
+  border-bottom: 1px solid var(--color-border);
 }
-.upload-msg.error {
+
+.staging-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-th-text);
+}
+
+.staging-clear-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.staging-clear-btn:hover {
   color: var(--color-error);
   background: var(--color-error-bg);
 }
+
+.staging-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+/* Individual staged file row */
+.staged-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--color-border);
+  transition: background 0.15s;
+}
+.staged-file:first-child { border-top: none; }
+.staged-file.staged-uploading { background: var(--color-row-hover); }
+.staged-file.staged-done     { opacity: 0.55; }
+
+.staged-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.staged-name {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.staged-size {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Per-file progress bar */
+.staged-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  width: 160px;
+}
+
+.staged-progress .progress-track {
+  flex: 1;
+  height: 5px;
+  background: var(--color-surface-alt);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.staged-progress .progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--color-primary);
+  border-radius: 99px;
+  transition: width 0.1s linear;
+}
+
+.staged-progress .progress-pct {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Status badge (✓ / ✗) */
+.staged-badge {
+  font-size: 0.9rem;
+  font-weight: 700;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.staged-badge.done  { color: #1a7a3a; }
+.staged-badge.error { color: var(--color-error); }
+[data-theme="dark"] .staged-badge.done { color: #4caf74; }
+
+/* Remove (✕) button */
+.staged-remove {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.staged-remove:hover {
+  color: var(--color-error);
+  background: var(--color-error-bg);
+}
+
+/* Footer */
+.staging-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.staging-count {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.btn-upload-all {
+  padding: 7px 20px;
+  background: var(--color-btn-bg);
+  color: var(--color-btn-text);
+  border: none;
+  border-radius: 7px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-upload-all:hover:not(:disabled) { background: var(--color-btn-hover); }
+.btn-upload-all:disabled { opacity: 0.45; cursor: default; }
