@@ -103,9 +103,9 @@ def login_page(request: Request):
 
 
 @router.post("/web/login")
-async def web_login(request: Request, password: str = Form(...)):
+async def web_login(request: Request, password: str = Form(default="")):
     """Form-based login. Sets JWT cookie and redirects to /browse."""
-    if password != server.session.get("password"):
+    if not password or password != server.session.get("password"):
         return _get_templates().TemplateResponse(
             request, "login.html", {"error": True, "qr_expired": False},
             status_code=401,
