@@ -22,29 +22,80 @@ pyinstaller LanHopper.spec
 
 ## Flet API reference
 
-When working with Flet (UI framework), always consult the official docs for correct API usage — especially since the API changed significantly at v0.80:
+When working with Flet, always consult the installed source at `.venv/lib/python3.14/site-packages/flet/controls/` to verify parameter names before using them. The API changed significantly at v0.80 and many online examples are outdated.
 
 - Docs: https://flet.dev/docs/
 - API Reference: https://docs.flet.dev/api-reference/
 
-Known breaking changes already applied:
-- `ft.app(target=fn)` → `ft.run(fn)` (positional, not keyword)
+**Verified breaking changes in this project's installed version:**
+
+| Old (pre-0.80 / outdated examples) | Correct |
+|---|---|
+| `ft.app(target=fn)` | `ft.run(fn)` — positional |
+| `ft.Icon(name=x)` | `ft.Icon(x)` — positional |
+| `FilledButton(text=x, icon=y)` | `FilledButton(content=x, icon=y)` |
+| `ElevatedButton(text=x)` | `ElevatedButton(content=x)` |
+| `OutlinedButton(text=x)` | `OutlinedButton(content=x)` |
+| `Dropdown(on_change=fn)` | `Dropdown(on_select=fn)` |
+| `FilePicker(on_result=fn)` | assign `picker.on_result = fn` after init; add to `page.overlay` |
+| `ft.ImageFit.CONTAIN` | `ft.BoxFit.CONTAIN` |
+| `ft.Image(src_base64=x)` | `ft.Image(x)` — `src` is positional, accepts URL/base64/bytes, must be non-empty |
+| `page.set_clipboard(x)` / `page.clipboard = x` | `await Clipboard().set(x)` — async, import from `flet.controls.services.clipboard` |
+| `ft.SnackBar` in `controls[]` | `page.show_dialog(ft.SnackBar(...))` |
+| `ft.AlertDialog` in `controls[]` | add to `page.overlay` in `did_mount()`, remove in `will_unmount()` |
+
+**Rules:**
+- When an `unexpected keyword argument` error appears, grep the installed source — do not trust docs or examples.
+- `ft.AlertDialog` and `ft.FilePicker` go in `page.overlay` via `did_mount`/`will_unmount`. Do NOT call `page.update()` inside `did_mount`.
+- An empty `AlertDialog` fails Flet validation even before opening — initialize with `title=ft.Text(" ")`.
+- `ft.Image` with no valid src also fails validation — use a `ft.Container` as slot and assign `container.content = ft.Image(b64)` only when data is available.
+- Background thread callbacks must update the UI via `page.run_task(async_fn)`, not directly.
 
 ## Architecture
 
 The app has two parallel runtimes that must coexist:
 
 1. **Flet desktop window** (`main.py` → `app/views/`) — runs on the main thread via `ft.run()`.
-2. **FastAPI + uvicorn HTTP server** (`app/server.py`) — runs in a daemon thread started/stopped by the user from the UI.
+2. **FastAPI + uvicorn HTTP server** (`app/server.py`) — runs in a daemon thread started/stopped from the Server screen.
 
-`app/server.py` holds a module-level `session` dict (`password`, `jwt_secret`) that is populated on `start()` and cleared on `stop()`. Both values are ephemeral — generated fresh on every server start, never persisted.
+`app/server.py` holds a module-level `session` dict that is populated on `start()` and cleared on `stop()`. All session state is ephemeral — never persisted.
 
 ## Security model
 
-- A random 6-digit password is generated each time the server starts.
-- A JWT secret is generated alongside it (in-memory only).
-- `app/middleware/auth.py` intercepts every request except `POST /auth/login` and validates the `Authorization: Bearer <token>` header.
+- A random **6-character alphanumeric password** is generated on each server start (never stored).
+- A **JWT secret** is generated alongside it (in-memory only).
+- A **single-use QR token** (short-lived JWT with `jti`) is generated immediately and rotated on a background thread every `qr_token_minutes`. Scanning the QR exchanges the token for a session cookie.
+- `app/middleware/auth.py` validates requests via Bearer header (API clients) or `access_token` cookie (browser). Public paths: `/`, `/web/login`, `/auth/login`, `/logout`, `/static/*`.
 - Sessions do not survive a server restart by design.
+
+## File serving security (path traversal prevention)
+
+All file downloads go through `_safe_path()` in `app/api/files.py`:
+
+```python
+def _safe_path(shared: Path, user_input: str) -> Path:
+    resolved = (shared / user_input).resolve()   # collapses .., follows symlinks
+    resolved.relative_to(shared.resolve())        # raises ValueError if outside root
+    return resolved
+```
+
+**Two defence layers in practice:**
+1. **uvicorn** rejects requests with `%2F` (encoded slash) in the path at the HTTP protocol level — the request never reaches the application.
+2. **`_safe_path`** catches everything else: plain `../`, multi-level escapes, and symlinks pointing outside the shared root.
+
+**Rule:** every filesystem operation that takes user-supplied input must go through `_safe_path` before touching the disk. Never construct a `Path` from user input directly.
+
+## Subfolder support — future implementation guide
+
+The current file API serves only the flat top-level of the shared folder. When subfolder browsing is added, start from `app/api/files.py` where the full design notes live. Key points:
+
+- Change `{filename}` → `{path:path}` in route definitions so FastAPI captures slashes.
+- `_safe_path(shared, path)` works unchanged for any depth — no changes needed to the security guard.
+- Add a `/browse/{path:path}` listing endpoint that returns `{"dirs": [...], "files": [...]}`.
+- Apply `_safe_path` to the **directory path** too before calling `iterdir()`.
+- Never expose absolute paths to the client — only paths relative to the shared root.
+- Frontend needs breadcrumb navigation and a path-aware `FILES` model instead of the current flat array.
+- Upload endpoint (`app/api/upload.py`) must accept a target subdirectory as a form field and validate it with `_safe_path` before writing.
 
 ## Config and i18n
 
@@ -55,11 +106,13 @@ The app has two parallel runtimes that must coexist:
 
 1. Add a route to an existing file in `app/api/` or create a new router file there.
 2. If new file: include the router in `app/server.py` via `app.include_router(...)`.
+3. If the route should be public, add its path to `_PUBLIC_PATHS` in `app/middleware/auth.py`.
 
 ## Adding a new screen
 
-1. Create `app/views/<screen>.py` with a class that receives `ft.Page`.
-2. Wire it from `app/views/home.py` or a navigation element.
+1. Create `app/views/<screen>.py` as a `ft.Column` subclass.
+2. Add a `NavigationRailDestination` in `home.py`.
+3. Handle the new index in `HomeView._navigate()`.
 
 ## Language strings
 

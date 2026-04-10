@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}LanHopper{% endblock %}</title>
+  <!-- Apply saved theme before first paint — prevents flash of wrong theme -->
+  <script>(function(){var t=localStorage.getItem('lh-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <link rel="stylesheet" href="/static/css/theme.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="navbar-brand">
+      <span class="navbar-logo">LH</span>
+      <span class="navbar-title">LanHopper</span>
+    </div>
+
+    {% block navbar_center %}{% endblock %}
+
+    <div class="navbar-actions">
+      {% block navbar_actions %}{% endblock %}
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
+        <span class="sun">☀</span>
+        <span class="moon">☾</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    function toggleTheme() {
+      var current = document.documentElement.getAttribute('data-theme');
+      var next = current === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('lh-theme', next);
+    }
+  </script>
+</body>
+</html>

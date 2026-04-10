@@ -1,13 +1,31 @@
 import json
-import os
 import sys
 from pathlib import Path
+
+
+def _exe_dir() -> Path:
+    """Root directory of the executable (dev or PyInstaller bundle)."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path(__file__).parent.parent
+
+
+def _default_shared_dir() -> str:
+    return str(_exe_dir() / "shared")
+
 
 _DEFAULTS = {
     "device_name": "LanHopper",
     "port": 8080,
-    "shared_folder": str(Path.home() / "LanHopper" / "shared"),
+    "shared_folder": {
+        "type": "local",
+        "path": _default_shared_dir(),
+    },
     "language": "en",
+    "qr_token_minutes": 5,
+    "session_minutes": 60,
+    "max_upload_mb": 512,
+    "theme": "dark",
 }
 
 

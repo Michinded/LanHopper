@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+
+{% block title %}LanHopper — {{ device_name }}{% endblock %}
+
+{% block navbar_center %}
+  <span class="navbar-device">{{ device_name }}</span>
+{% endblock %}
+
+{% block navbar_actions %}
+  <a href="/logout" class="btn-logout">Log out</a>
+{% endblock %}
+
+{% block content %}
+<div class="browse-container">
+
+  <!-- Drop zone -->
+  <div class="upload-zone" id="uploadZone">
+    <div class="upload-icon">&#8679;</div>
+    <p class="upload-label">
+      Drop files here or
+      <label for="fileInput" class="upload-link">choose files</label>
+    </p>
+    {% if max_upload_mb == 0 %}
+    <p class="upload-hint upload-hint-warn">
+      No size limit — very large files may be corrupted depending on hardware and LAN stability.
+    </p>
+    {% else %}
+    <p class="upload-hint">Max {{ max_upload_mb }} MB per file</p>
+    {% endif %}
+    <input type="file" id="fileInput" multiple hidden>
+  </div>
+
+  <!-- Staging queue (hidden when empty) -->
+  <div class="staging-area" id="stagingArea" hidden>
+    <div class="staging-header">
+      <span class="staging-title">Pending upload</span>
+      <button class="staging-clear-btn" id="btnClearAll" onclick="clearPending()">Clear all</button>
+    </div>
+    <div class="staging-list" id="stagingList"></div>
+    <div class="staging-footer">
+      <span class="staging-count" id="stagingCount"></span>
+      <button class="btn-upload-all" id="btnUploadAll" onclick="startUpload()">Upload</button>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="filter-search-wrap">
+      <span class="filter-search-icon">&#128269;</span>
+      <input type="search" id="searchInput" class="filter-search" placeholder="Search files…"
+             oninput="onFilterChange()" autocomplete="off" spellcheck="false">
+    </div>
+    <select id="extFilter" class="filter-select" onchange="onFilterChange()">
+      <option value="">All types</option>
+    </select>
+    <button id="btnClearFilters" class="btn-clear-filters" onclick="clearFilters()" hidden>
+      &#10005; Clear
+    </button>
+    <span class="filter-count" id="filterCount"></span>
+  </div>
+
+  <!-- File table -->
+  <div id="fileTableContainer"></div>
+
+  <!-- Pagination (rendered by JS) -->
+  <div class="pagination" id="pagination" hidden></div>
+
+</div>
+
+<!-- Embed file data for JS -->
+<script>
+var FILES = {{ files | tojson }};
+</script>
+
+<script>
+(function () {
+  var MAX_MB    = {{ max_upload_mb }};
+  var MAX_BYTES = MAX_MB * 1024 * 1024;
+  var PAGE_SIZE = 50;
+
+  // Download icon SVG (stroke="currentColor" so it inherits CSS color)
+  var DL_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    + '<path d="M17 17H17.01M17.4 14H18C18.9319 14 19.3978 14 19.7654 14.1522C20.2554 14.3552 20.6448 14.7446'
+    + ' 20.8478 15.2346C21 15.6022 21 16.0681 21 17C21 17.9319 21 18.3978 20.8478 18.7654C20.6448 19.2554'
+    + ' 20.2554 19.6448 19.7654 19.8478C19.3978 20 18.9319 20 18 20H6C5.06812 20 4.60218 20 4.23463'
+    + ' 19.8478C3.74458 19.6448 3.35523 19.2554 3.15224 18.7654C3 18.3978 3 17.9319 3 17C3 16.0681 3'
+    + ' 15.6022 3.15224 15.2346C3.35523 14.7446 3.74458 14.3552 4.23463 14.1522C4.60218 14 5.06812 14 6'
+    + ' 14H6.6M12 15V4M12 15L9 12M12 15L15 12"'
+    + ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* ================================================================
+     State
+  ================================================================ */
+  var state = { search: '', ext: '', page: 0 };
+
+  /* ================================================================
+     Upload — staging queue
+  ================================================================ */
+  var nextId      = 0;
+  var queue       = [];
+  var isUploading = false;
+
+  var zone        = document.getElementById('uploadZone');
+  var fileInput   = document.getElementById('fileInput');
+  var stagingArea = document.getElementById('stagingArea');
+  var stagingList = document.getElementById('stagingList');
+  var countEl     = document.getElementById('stagingCount');
+  var btnUpload   = document.getElementById('btnUploadAll');
+  var btnClear    = document.getElementById('btnClearAll');
+
+  zone.addEventListener('click', function (e) {
+    if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') fileInput.click();
+  });
+  zone.addEventListener('dragover',  function (e) { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', function ()  { zone.classList.remove('drag-over'); });
+  zone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) addFiles(Array.from(e.dataTransfer.files));
+  });
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files.length) addFiles(Array.from(fileInput.files));
+    fileInput.value = '';
+  });
+
+  function addFiles(files) {
+    var rejected = [];
+    files.forEach(function (f) {
+      if (MAX_MB > 0 && f.size > MAX_BYTES) { rejected.push(f.name); return; }
+      queue.push({ id: nextId++, file: f, status: 'pending' });
+    });
+    if (rejected.length)
+      alert('The following files exceed the ' + MAX_MB + ' MB limit and were not added:\n\n' + rejected.join('\n'));
+    renderQueue();
+  }
+
+  window.removeFile = function (id) {
+    queue = queue.filter(function (i) { return i.id !== id; });
+    renderQueue();
+  };
+  window.clearPending = function () {
+    queue = queue.filter(function (i) { return i.status !== 'pending'; });
+    renderQueue();
+  };
+
+  function renderQueue() {
+    var hasPending  = queue.some(function (i) { return i.status === 'pending'; });
+    stagingArea.hidden = !queue.length;
+
+    stagingList.innerHTML = queue.map(function (item) {
+      var progressHtml = '', statusHtml = '', removeHtml = '';
+      if (item.status === 'uploading') {
+        progressHtml =
+          '<div class="staged-progress">' +
+            '<div class="progress-track"><div class="progress-fill" id="pf-' + item.id + '"></div></div>' +
+            '<span class="progress-pct" id="pp-' + item.id + '">0%</span>' +
+          '</div>';
+      } else if (item.status === 'done') {
+        statusHtml = '<span class="staged-badge done">&#10003;</span>';
+      } else if (item.status === 'error') {
+        statusHtml = '<span class="staged-badge error" title="' + escHtml(item.error || 'Failed') + '">&#10007;</span>';
+        removeHtml = '<button class="staged-remove" onclick="removeFile(' + item.id + ')">&#10005;</button>';
+      } else {
+        removeHtml = '<button class="staged-remove" onclick="removeFile(' + item.id + ')">&#10005;</button>';
+      }
+      return '<div class="staged-file staged-' + item.status + '">' +
+        '<div class="staged-info">' +
+          '<span class="staged-name" title="' + escHtml(item.file.name) + '">' + escHtml(item.file.name) + '</span>' +
+          '<span class="staged-size">' + fmtSize(item.file.size) + '</span>' +
+        '</div>' +
+        progressHtml + statusHtml + removeHtml +
+      '</div>';
+    }).join('');
+
+    var pending   = queue.filter(function (i) { return i.status === 'pending'; });
+    var totalSize = pending.reduce(function (acc, i) { return acc + i.file.size; }, 0);
+    var done      = queue.filter(function (i) { return i.status === 'done'; }).length;
+    var errors    = queue.filter(function (i) { return i.status === 'error'; }).length;
+    var parts = [];
+    if (pending.length) parts.push(pending.length + ' pending (' + fmtSize(totalSize) + ')');
+    if (done)           parts.push(done + ' done');
+    if (errors)         parts.push(errors + ' failed');
+    countEl.textContent = parts.join('  ·  ');
+
+    btnUpload.textContent = pending.length === 1 ? 'Upload 1 file' : 'Upload ' + pending.length + ' files';
+    btnUpload.disabled    = isUploading || !hasPending;
+    btnClear.style.display = (hasPending && !isUploading) ? '' : 'none';
+  }
+
+  window.startUpload = function () {
+    if (isUploading) return;
+    isUploading = true;
+    renderQueue();
+    uploadNext();
+  };
+
+  function uploadNext() {
+    var next = null;
+    for (var i = 0; i < queue.length; i++) {
+      if (queue[i].status === 'pending') { next = queue[i]; break; }
+    }
+    if (!next) {
+      isUploading = false;
+      refreshFiles();
+      renderQueue();
+      setTimeout(function () {
+        queue = queue.filter(function (i) { return i.status !== 'done'; });
+        renderQueue();
+      }, 3000);
+      return;
+    }
+    next.status = 'uploading';
+    renderQueue();
+
+    var fd  = new FormData();
+    fd.append('file', next.file);
+    var xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', function (e) {
+      if (e.lengthComputable) {
+        var p = Math.round(e.loaded / e.total * 100);
+        var fill = document.getElementById('pf-' + next.id);
+        var pct  = document.getElementById('pp-' + next.id);
+        if (fill) fill.style.width = p + '%';
+        if (pct)  pct.textContent  = p + '%';
+      }
+    });
+    xhr.addEventListener('load', function () {
+      if (xhr.status === 200) {
+        next.status = 'done';
+      } else {
+        next.status = 'error';
+        try { next.error = JSON.parse(xhr.responseText).detail; }
+        catch (e) { next.error = 'Upload failed (HTTP ' + xhr.status + ')'; }
+      }
+      renderQueue();
+      uploadNext();
+    });
+    xhr.addEventListener('error', function () {
+      next.status = 'error';
+      next.error  = 'Connection error';
+      renderQueue();
+      uploadNext();
+    });
+    xhr.open('POST', '/upload/');
+    xhr.send(fd);
+  }
+
+  /* ================================================================
+     File list — filter, render, paginate
+  ================================================================ */
+
+  // Populate extension filter from current file list
+  function buildExtFilter() {
+    var seen = {};
+    FILES.forEach(function (f) {
+      var ext = extOf(f.name);
+      if (ext) seen[ext] = true;
+    });
+    var exts = Object.keys(seen).sort();
+    var sel  = document.getElementById('extFilter');
+    // Remove all but the first option ("All types")
+    while (sel.options.length > 1) sel.remove(1);
+    exts.forEach(function (ext) {
+      var opt = document.createElement('option');
+      opt.value = ext;
+      opt.textContent = '.' + ext.toUpperCase();
+      sel.appendChild(opt);
+    });
+  }
+
+  function filteredFiles() {
+    var q = state.search.toLowerCase();
+    return FILES.filter(function (f) {
+      var matchSearch = !q || f.name.toLowerCase().indexOf(q) !== -1;
+      var matchExt    = !state.ext || extOf(f.name) === state.ext;
+      return matchSearch && matchExt;
+    });
+  }
+
+  function renderTable() {
+    var list  = filteredFiles();
+    var total = list.length;
+    var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    state.page = Math.min(state.page, pages - 1);
+    var slice = list.slice(state.page * PAGE_SIZE, (state.page + 1) * PAGE_SIZE);
+
+    var container = document.getElementById('fileTableContainer');
+    var countEl2  = document.getElementById('filterCount');
+    var pager     = document.getElementById('pagination');
+    var btnClearF = document.getElementById('btnClearFilters');
+    var hasFilter = state.search || state.ext;
+
+    // Count label
+    if (hasFilter) {
+      countEl2.textContent = total + ' of ' + FILES.length + ' file' + (FILES.length !== 1 ? 's' : '');
+    } else {
+      countEl2.textContent = FILES.length + ' file' + (FILES.length !== 1 ? 's' : '');
+    }
+    btnClearF.hidden = !hasFilter;
+
+    // Empty states
+    if (FILES.length === 0) {
+      container.innerHTML = '<p class="empty">No files in the shared folder yet.</p>';
+      pager.hidden = true;
+      return;
+    }
+    if (total === 0) {
+      container.innerHTML = '<p class="empty">No files match your search.</p>';
+      pager.hidden = true;
+      return;
+    }
+
+    // Table
+    var rows = slice.map(function (f) {
+      var ext     = extOf(f.name);
+      var badge   = ext
+        ? '<span class="ext-badge">' + escHtml(ext.toUpperCase()) + '</span>'
+        : '<span class="ext-badge ext-badge-none">—</span>';
+      var dlUrl   = '/files/download/' + encodeURIComponent(f.name);
+      return '<tr>' +
+        '<td class="col-name">' + badge +
+          '<a href="' + dlUrl + '">' + escHtml(f.name) + '</a>' +
+        '</td>' +
+        '<td class="size">' + f.size + '</td>' +
+        '<td class="col-action">' +
+          '<a href="' + dlUrl + '" class="btn-download" download title="Download">' + DL_ICON + '</a>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+
+    container.innerHTML =
+      '<table>' +
+        '<thead><tr>' +
+          '<th>File</th>' +
+          '<th class="col-size">Size</th>' +
+          '<th class="col-action-head"></th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>';
+
+    // Pagination
+    renderPagination(pages, state.page, total);
+  }
+
+  // Build array of page indices with null for ellipsis gaps
+  function pageNums(current, total) {
+    if (total <= 7) {
+      var arr = [];
+      for (var i = 0; i < total; i++) arr.push(i);
+      return arr;
+    }
+    var range = {};
+    range[0] = true;
+    range[total - 1] = true;
+    for (var i = Math.max(0, current - 2); i <= Math.min(total - 1, current + 2); i++) {
+      range[i] = true;
+    }
+    var sorted = Object.keys(range).map(Number).sort(function (a, b) { return a - b; });
+    var result = [];
+    var prev = null;
+    for (var j = 0; j < sorted.length; j++) {
+      if (prev !== null && sorted[j] - prev > 1) result.push(null); // ellipsis
+      result.push(sorted[j]);
+      prev = sorted[j];
+    }
+    return result;
+  }
+
+  function renderPagination(pages, current, total) {
+    var pager = document.getElementById('pagination');
+    if (pages <= 1) { pager.hidden = true; return; }
+    pager.hidden = false;
+
+    var nums = pageNums(current, pages);
+    var html = '';
+
+    html += '<button class="page-btn" onclick="changePage(-1)"'
+      + (current === 0 ? ' disabled' : '') + '>&#8592; Prev</button>';
+
+    html += '<div class="page-nums">';
+    nums.forEach(function (p) {
+      if (p === null) {
+        html += '<span class="page-ellipsis">&#8230;</span>';
+      } else {
+        html += '<button class="page-num' + (p === current ? ' current' : '')
+          + '" onclick="goPage(' + p + ')">' + (p + 1) + '</button>';
+      }
+    });
+    html += '</div>';
+
+    html += '<button class="page-btn" onclick="changePage(1)"'
+      + (current >= pages - 1 ? ' disabled' : '') + '>Next &#8594;</button>';
+
+    pager.innerHTML = html;
+  }
+
+  window.onFilterChange = function () {
+    state.search = document.getElementById('searchInput').value;
+    state.ext    = document.getElementById('extFilter').value;
+    state.page   = 0;
+    renderTable();
+  };
+
+  window.clearFilters = function () {
+    state.search = '';
+    state.ext    = '';
+    state.page   = 0;
+    document.getElementById('searchInput').value = '';
+    document.getElementById('extFilter').value   = '';
+    renderTable();
+  };
+
+  window.changePage = function (delta) {
+    var list  = filteredFiles();
+    var pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+    state.page = Math.max(0, Math.min(state.page + delta, pages - 1));
+    renderTable();
+    document.getElementById('fileTableContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  window.goPage = function (p) {
+    state.page = p;
+    renderTable();
+    document.getElementById('fileTableContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  /* ================================================================
+     Refresh after upload
+  ================================================================ */
+  function refreshFiles() {
+    fetch('/files/')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        FILES = (data.files || []).map(function (f) {
+          return { name: f.name, size: fmtSize(f.size), raw_size: f.size };
+        });
+        buildExtFilter();
+        renderTable();
+      })
+      .catch(function () {});
+  }
+
+  /* ================================================================
+     Helpers
+  ================================================================ */
+  function extOf(name) {
+    var dot = name.lastIndexOf('.');
+    return (dot > 0 && dot < name.length - 1) ? name.slice(dot + 1).toLowerCase() : '';
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtSize(bytes) {
+    var units = ['B','KB','MB','GB'];
+    var i = 0;
+    while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+    return (i === 0 ? bytes : bytes.toFixed(1)) + '\u00a0' + units[i];
+  }
+
+  /* ================================================================
+     Init
+  ================================================================ */
+  buildExtFilter();
+  renderTable();
+})();
+</script>
+{% endblock %}
