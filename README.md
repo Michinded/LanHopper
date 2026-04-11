@@ -57,6 +57,16 @@ See [`docs/builds/flet-build-macos.md`](docs/builds/flet-build-macos.md) for the
 
 ---
 
+## Security and disclaimer
+
+LanHopper is designed for **private local networks only**. Traffic is unencrypted HTTP — do not use it on public or untrusted Wi-Fi.
+
+This is an open-source, non-commercial project provided **as is** with no warranties. The authors are not liable for any damages resulting from its use. Bug reports and feedback are welcome via [GitHub Issues](https://github.com/Michinded/LanHopper/issues).
+
+See the [User Guide](docs/user-guide.md#security-notes-and-best-practices) for the full security notes and recommended practices.
+
+---
+
 ## Configuration (`data/user_config.json`)
 
 Created automatically on first launch. Editable via the Settings screen.
