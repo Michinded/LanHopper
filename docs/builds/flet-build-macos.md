@@ -88,3 +88,4 @@ Output: `releases/LanHopper-v<VERSION>-fbuild.dmg`
 - The `.app` bundle uses the Flutter runtime and embeds Python via `serious_python`.
 - Built on macOS only — cross-compilation is not supported.
 - The `releases/` directory is gitignored; upload artifacts manually to GitHub Releases.
+- **PyInstaller is not supported** with Flet >= 0.80 on macOS. The Flet desktop bundle includes Swift/Flutter binaries (`libswift_Concurrency.dylib`, `Dav1d.framework`) that PyInstaller 6.x cannot codesign correctly. Use `flet build` exclusively.
