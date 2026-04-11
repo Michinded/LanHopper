@@ -41,12 +41,33 @@
 - All active sessions are immediately invalidated.
 - A new password and QR code are generated on the next start.
 
-## Security notes
+## Security notes and best practices
 
-- The password is randomly generated on every server start and never stored.
-- The QR code is single-use and rotates automatically — do not share screenshots of it.
-- Sessions do not survive a server restart.
-- Only devices on the same local network can connect.
+### How LanHopper protects your session
+
+- The password is randomly generated on every server start and never stored on disk.
+- The QR code is single-use and rotates automatically — scanning it a second time will not grant access.
+- Sessions are invalidated immediately when the server is stopped.
+- All file access is restricted to the configured shared folder — no other part of your system is reachable.
+
+### Recommended practices
+
+- **Only share what you need.** Point the shared folder to a dedicated transfer folder, not your entire home directory or Documents.
+- **Stop the server when you're done.** Don't leave it running unattended, even on a trusted network.
+- **Don't share QR screenshots.** The QR encodes a one-time token — treat it like a password.
+- **Use short QR and session timeouts.** The defaults (5 min QR / 60 min session) are a reasonable balance; lower them if you're in a less trusted environment.
+- **Trusted networks only.** LanHopper is designed for private home or office networks. Avoid using it on public Wi-Fi or shared hotspots.
+- **No HTTPS.** Traffic between devices is unencrypted HTTP. This is acceptable on a private LAN but means data could be intercepted on untrusted networks.
+
+## Disclaimer
+
+LanHopper is an open-source project provided **as is**, free of charge, with no warranties of any kind — express or implied.
+
+- The authors are not responsible for any data loss, unauthorized access, security breaches, or any other damages resulting from the use or misuse of this software.
+- By using LanHopper, you accept full responsibility for how and where you run it.
+- This is a non-commercial project maintained on a best-effort basis. There are no guaranteed response times or obligations to fix reported issues, though feedback and bug reports are always welcome via [GitHub Issues](https://github.com/Michinded/LanHopper/issues).
+
+If you discover a security vulnerability, please report it through GitHub Issues and we will review it as soon as possible.
 
 ## Settings reference
 
