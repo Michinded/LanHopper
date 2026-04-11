@@ -18,6 +18,32 @@ flet doctor
 flutter doctor
 ```
 
+---
+
+## App metadata — `pyproject.toml`
+
+`flet build` reads bundle metadata from `pyproject.toml` at the project root. This controls the `Info.plist` values embedded in the `.app`, including the bundle identifier, version, and minimum macOS version.
+
+```toml
+[tool.flet]
+app_name = "LanHopper"
+product = "LanHopper"
+description = "Simple LAN file transfer tool with a modern desktop UI."
+company = "Michinded"
+copyright = "Copyright © 2025 Michinded. MIT License."
+version = "0.9.0"
+
+[tool.flet.macos]
+bundle_id = "com.michinded.lanhopper"
+minimum_version = "11.0"
+```
+
+**Update `version` here before every release.** The bundle identifier follows reverse-domain notation and should remain stable across releases.
+
+`minimum_version = "11.0"` targets macOS Big Sur and later, which covers all Apple Silicon Macs and Intel Macs from ~2015 onward.
+
+---
+
 ## Icon requirements
 
 Place the following files in `assets/` before building:
@@ -54,6 +80,8 @@ img.save('assets/icon.ico', format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64)
 "
 ```
 
+---
+
 ## Build
 
 ```bash
@@ -61,6 +89,47 @@ img.save('assets/icon.ico', format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64)
 ```
 
 Output: `build/macos/LanHopper.app`
+
+The resulting `.app` is a **universal binary** — runs natively on both Apple Silicon (arm64) and Intel (x86_64) Macs with macOS 11+.
+
+---
+
+## Troubleshooting — known issues
+
+### `ModuleNotFoundError: No module named 'tkinter'`
+
+`flet build` embeds a minimal Python runtime via `serious_python`. `tkinter` is a C extension that is not pip-installable and is never included in the bundle.
+
+**Fix:** Replace any `tkinter` usage with Flet's native alternatives:
+- Folder/file picker → `ft.FilePicker().get_directory_path()` (async)
+- Clipboard → `await Clipboard().set(value)` from `flet.controls.services.clipboard`
+
+### Build fails with codesign error on `Dav1d.framework`
+
+On newer versions of macOS and Xcode the codesign step may fail with:
+
+```
+bundle format unrecognized, invalid, or unsuitable
+In subcomponent: .../Flet.app/Contents/Frameworks/Dav1d.framework
+```
+
+**Fix:** Re-sign the Flet desktop client before building:
+
+```bash
+# Find your installed Flet client version
+ls ~/.flet/client/
+
+# Re-sign (replace 0.84.0 with your version)
+codesign --force --deep --sign - ~/.flet/client/flet-desktop-full-0.84.0/Flet.app
+codesign --force --sign - ~/.flet/client/flet-desktop-full-0.84.0/Flet.app/Contents/Frameworks/Dav1d.framework
+
+# Clear PyInstaller binary cache if present
+rm -rf ~/Library/Application\ Support/pyinstaller/
+```
+
+Then run `flet build macos` again.
+
+---
 
 ## Package as DMG
 
@@ -81,6 +150,8 @@ create-dmg \
 Replace `<VERSION>` with the current version (e.g. `0.9.0`). The naming convention `fbuild` indicates a Flet build, as opposed to `pbuild` for PyInstaller.
 
 Output: `releases/LanHopper-v<VERSION>-fbuild.dmg`
+
+---
 
 ## Notes
 
