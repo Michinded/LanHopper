@@ -1,0 +1,11 @@
+[tool.flet]
+app_name = "LanHopper"
+product = "LanHopper"
+description = "Simple LAN file transfer tool with a modern desktop UI."
+company = "Michinded"
+copyright = "Copyright © 2025 Michinded. MIT License."
+version = "0.9.0"
+
+[tool.flet.macos]
+bundle_id = "com.michinded.lanhopper"
+minimum_version = "11.0"
