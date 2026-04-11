@@ -13,33 +13,49 @@ A simple LAN file transfer tool with a modern desktop UI.
 - Local and network (UNC / mount) shared folder support
 - Multi-language support (English / Spanish)
 
-## Requirements
+---
+
+## For users
+
+Download the latest release for your platform from the [Releases page](https://github.com/Michinded/LanHopper/releases).
+
+| Platform | File |
+|---|---|
+| macOS | `LanHopper-vX.X.X-fbuild.dmg` |
+
+1. Open the `.dmg` and drag **LanHopper** to your Applications folder.
+2. Launch the app.
+
+See the [User Guide](docs/user-guide.md) for full usage instructions.
+
+---
+
+## For developers
+
+### Requirements
 
 - Python 3.10+
-- See `requirements.txt`
+- Flutter (stable) — required for `flet build`
+- Xcode 15+ and CocoaPods 1.16+ (macOS builds)
 
-## Setup
+### Setup
 
 ```bash
 pip install -r requirements.txt
 python main.py
 ```
 
-## Build executable
+### Building
+
+LanHopper uses `flet build` to produce native desktop bundles. PyInstaller is not supported with Flet >= 0.80.
 
 ```bash
-pyinstaller LanHopper.spec
+flet build macos
 ```
 
-## Usage
+See [`docs/builds/flet-build-macos.md`](docs/builds/flet-build-macos.md) for the full build and DMG packaging guide.
 
-1. Launch the app
-2. Go to **Settings** — configure shared folder, port, and security timings
-3. Go to **Server** — press **Start Server**
-4. The terminal shows the LAN URL, password, and QR URL
-5. On another device: scan the QR for instant access, or open the URL and enter the password
-6. Browse and download files from the shared folder
-7. Press **Log out** in the browser when done, or let the session expire
+---
 
 ## Configuration (`data/user_config.json`)
 

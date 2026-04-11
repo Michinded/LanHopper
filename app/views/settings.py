@@ -1,10 +1,9 @@
-import threading
 import flet as ft
 
 import app.server as server
 from app import config, i18n
 from app.utils.network import check_port, kill_process
-from app.utils.paths import normalize_path, pick_folder
+from app.utils.paths import normalize_path
 
 
 class SettingsView(ft.Column):
@@ -235,13 +234,11 @@ class SettingsView(ft.Column):
         self._field_path.value = self._folder.get("path", "") if is_local else ""
         self.update()
 
-    def _on_browse(self, _):
-        def run():
-            path = pick_folder()
-            if path:
-                self._field_path.value = path
-                self._field_path.update()
-        threading.Thread(target=run, daemon=True).start()
+    async def _on_browse(self, _):
+        path = await ft.FilePicker().get_directory_path()
+        if path:
+            self._field_path.value = path
+            self._field_path.update()
 
     def _on_validate_path(self, _):
         from pathlib import Path

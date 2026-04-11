@@ -16,9 +16,31 @@ pip install -r requirements.txt
 
 ## Building the executable
 
+Use `flet build` — PyInstaller is **not supported** with Flet >= 0.80 on macOS (codesigning incompatibility with Swift/Flutter binaries).
+
 ```bash
-pyinstaller LanHopper.spec
+flet build macos
 ```
+
+Output: `build/macos/LanHopper.app`
+
+### Package as DMG
+
+```bash
+create-dmg \
+  --volname "LanHopper" \
+  --volicon "assets/icon.icns" \
+  --window-pos 200 120 \
+  --window-size 600 400 \
+  --icon-size 128 \
+  --icon "LanHopper.app" 150 185 \
+  --hide-extension "LanHopper.app" \
+  --app-drop-link 450 185 \
+  "releases/LanHopper-v<VERSION>-fbuild.dmg" \
+  "build/macos/"
+```
+
+See `docs/builds/flet-build-macos.md` for the full guide including icon generation.
 
 ## Flet API reference
 
