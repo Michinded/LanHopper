@@ -25,10 +25,8 @@ Download the latest release for your platform from the [Releases page](https://g
 
 1. Open the `.dmg` and drag **LanHopper** to your Applications folder.
 2. Launch the app.
-3. Go to **Settings** — configure shared folder, port, and security timings.
-4. Go to **Server** — press **Start Server**.
-5. On another device: scan the QR for instant access, or open the URL and enter the password.
-6. Browse and download files from the shared folder.
+
+See the [User Guide](docs/user-guide.md) for full usage instructions.
 
 ---
 
