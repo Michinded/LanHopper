@@ -1,5 +1,7 @@
 # LanHopper
 
+🇺🇸 English &nbsp;|&nbsp; 🇲🇽 [Español](README.es.md)
+
 A simple LAN file transfer tool with a modern desktop UI.
 
 ## Features
