@@ -34,6 +34,9 @@ jobs:
           Set-ItemProperty -Path $regPath -Name "AllowDevelopmentWithoutDevLicense" -Value 1
 
       - name: Build Windows app
+        env:
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: "utf-8"
         run: flet build windows --no-rich-output
 
       - name: Upload artifact
