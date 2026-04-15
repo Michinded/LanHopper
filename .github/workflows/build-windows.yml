@@ -20,7 +20,11 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        shell: powershell
+        run: |
+          # uvloop is Unix-only, exclude it on Windows
+          Get-Content requirements.txt | Where-Object { $_ -notmatch '^uvloop' } | Set-Content requirements-win.txt
+          pip install -r requirements-win.txt
 
       - name: Enable Developer Mode
         shell: powershell
