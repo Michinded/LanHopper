@@ -19,6 +19,27 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-
+
+      - name: Cache Flutter SDK
+        uses: actions/cache@v4
+        with:
+          path: ~\flutter
+          key: flutter-3.41.4-windows
+          restore-keys: flutter-3.41.4-
+
+      - name: Cache Flutter pub
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\Pub\Cache
+          key: pub-${{ hashFiles('pubspec.yaml') }}
+          restore-keys: pub-
+
       - name: Install dependencies
         shell: powershell
         run: |
